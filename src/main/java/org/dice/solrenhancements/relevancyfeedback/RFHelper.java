@@ -158,7 +158,7 @@ public class RFHelper
         return new BoostedQuery(q, vs);
     }
 
-    public RFResult getMatchesFromDocs(DocIterator iterator, int start, int rows, List<Query> filters, int flags, Sort lsort, Query mainQuery) throws IOException, SyntaxError
+    public RFResult getMatchesFromDocs(DocIterator iterator, int start, int rows, List<Query> filters, int flags, Sort lsort, Query userQuery) throws IOException, SyntaxError
     {
         realRFQuery = new BooleanQuery();
         List<Integer> ids = new ArrayList<Integer>();
@@ -187,9 +187,9 @@ public class RFHelper
 
         BooleanQuery finalQuery = null;
 
-        if(mainQuery != null){
+        if(userQuery != null){
             finalQuery = new BooleanQuery();
-            finalQuery.add(mainQuery, BooleanClause.Occur.MUST);
+            finalQuery.add(userQuery, BooleanClause.Occur.MUST);
             finalQuery.add(realRFQuery, BooleanClause.Occur.SHOULD);
         }
         else{
@@ -208,7 +208,7 @@ public class RFHelper
     }
 
 
-    public RFResult getMatchesFromContentSteam(Reader reader, int start, int rows, List<Query> filters, int flags, Sort lsort, Query mainQuery) throws IOException, SyntaxError
+    public RFResult getMatchesFromContentSteam(Reader reader, int start, int rows, List<Query> filters, int flags, Sort lsort, Query userQuery) throws IOException, SyntaxError
     {
         RFResult RFResult = rf.like(reader);
         rawRFQuery = RFResult.rawRFQuery;
@@ -216,9 +216,9 @@ public class RFHelper
         boostedRFQuery = getBoostedFunctionQuery(rawRFQuery);
 
         Query finalQuery = null;
-        if(mainQuery != null){
+        if(userQuery != null){
             BooleanQuery tmpQuery = new BooleanQuery();
-            tmpQuery .add(mainQuery, BooleanClause.Occur.MUST);
+            tmpQuery .add(userQuery, BooleanClause.Occur.MUST);
             tmpQuery .add(boostedRFQuery, BooleanClause.Occur.SHOULD);
             finalQuery = tmpQuery;
         }

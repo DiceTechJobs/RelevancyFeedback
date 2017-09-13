@@ -665,24 +665,6 @@ public final class UnsupervisedFeedback {
         }
     }
 
-    /**
-     * Return a query that will return docs queryFromDocuments the passed lucene document ID.
-     *
-     * @param docNum the documentID of the lucene doc to generate the 'More Like This" query for.
-     * @return a query that will return docs queryFromDocuments the passed lucene document ID.
-     */
-    public Query like(int docNum) throws IOException {
-        Map<String,Map<String, Flt>> fieldTermFreq = retrieveTerms(docNum);
-
-        BooleanQuery query = new BooleanQuery();
-        for(String fieldName: fieldTermFreq.keySet()){
-            Map<String,Flt> words = fieldTermFreq.get(fieldName);
-            PriorityQueue<USField> queue = createQueue(fieldName, words);
-            buildQueryForField(fieldName, queue, query);
-        }
-        return query;
-    }
-
     public BooleanQuery queryFromDocuments(List<Integer> docNums) throws IOException {
 
         Map<String,Map<String, Flt>> fieldTermFreq = new HashMap<String, Map<String, Flt>>();
