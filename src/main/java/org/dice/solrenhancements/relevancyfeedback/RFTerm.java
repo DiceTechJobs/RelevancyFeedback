@@ -1,4 +1,4 @@
-package org.dice.solrenhancements.morelikethis;
+package org.dice.solrenhancements.relevancyfeedback;
 
 import com.google.common.base.Strings;
 
@@ -8,7 +8,7 @@ import java.util.Comparator;
 /**
  * Created by simon.hughes on 9/4/14.
  */
-public class MLTTerm implements Comparable<MLTTerm> {
+public class RFTerm implements Comparable<RFTerm> {
 
     private final String word;
     private final String fieldName;
@@ -24,12 +24,12 @@ public class MLTTerm implements Comparable<MLTTerm> {
     private final boolean logTf;
 
     // non-payload
-    public MLTTerm(String word, String fieldName, float score, float tf, float idf, int docFreq, boolean logTf, float fieldBoost){
+    public RFTerm(String word, String fieldName, float score, float tf, float idf, int docFreq, boolean logTf, float fieldBoost){
         this(word, fieldName, score, tf, idf, docFreq, logTf, fieldBoost, 1.0f);
     }
 
     // with payload
-    public MLTTerm(String word, String fieldName, float score, float tf, float idf, int docFreq, boolean logTf, float fieldBoost, float payload){
+    public RFTerm(String word, String fieldName, float score, float tf, float idf, int docFreq, boolean logTf, float fieldBoost, float payload){
 
         this.word = word;
         this.fieldName = fieldName;
@@ -103,9 +103,9 @@ public class MLTTerm implements Comparable<MLTTerm> {
         return sb.toString();
     }
 
-    public static Comparator<MLTTerm> FLD_BOOST_X_SCORE_ORDER = new Comparator<MLTTerm>() {
+    public static Comparator<RFTerm> FLD_BOOST_X_SCORE_ORDER = new Comparator<RFTerm>() {
         @Override
-        public int compare(MLTTerm t1, MLTTerm t2) {
+        public int compare(RFTerm t1, RFTerm t2) {
             float d = t2.getScore() - t1.getScore();
             if( d == 0 ) {
                 return 0;
@@ -114,7 +114,7 @@ public class MLTTerm implements Comparable<MLTTerm> {
         }
     };
 
-    public int compareTo(MLTTerm o) {
+    public int compareTo(RFTerm o) {
         return ((Float)o.getBoostedScore()).compareTo(this.getBoostedScore());
     }
 }

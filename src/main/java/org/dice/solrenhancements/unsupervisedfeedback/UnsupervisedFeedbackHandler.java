@@ -40,13 +40,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Solr MoreLikeThis --
+ * Solr RelevancyFeedback --
  *
  * Return similar documents either based on a single document or based on posted text.
  *
  * @since solr 1.3
  */
-public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
+public class UnsupervisedFeedbackHandler extends RequestHandlerBase
 {
     private final static String EDISMAX = ExtendedDismaxQParserPlugin.NAME;
 
@@ -95,15 +95,15 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
             throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, e);
         }
 
-        UnsupervisedFeedbackHelper mlt = new UnsupervisedFeedbackHelper( params, searcher, uniqueKeyField, parser );
+        UnsupervisedFeedbackHelper usfdbk = new UnsupervisedFeedbackHelper( params, searcher, uniqueKeyField, parser );
 
         // Hold on to the interesting terms if relevant
         UnsupervisedFeedbackParams.TermStyle termStyle = UnsupervisedFeedbackParams.TermStyle.get(params.get(UnsupervisedFeedbackParams.INTERESTING_TERMS));
         List<InterestingTerm> interesting =
                 (termStyle == UnsupervisedFeedbackParams.TermStyle.NONE )?
-                        null : new ArrayList<InterestingTerm>( mlt.uf.getMaxQueryTermsPerField() );
+                        null : new ArrayList<InterestingTerm>( usfdbk.uf.getMaxQueryTermsPerField() );
 
-        DocListAndSet uffDocs = null;
+        DocListAndSet ufDocs = null;
 
         // Parse Required Params
         // This will either have a single Reader or valid query
@@ -112,7 +112,7 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
             int start = params.getInt(CommonParams.START, 0);
             int rows  = params.getInt(CommonParams.ROWS, 10);
 
-            // Find documents MoreLikeThis - either with a reader or a query
+            // Find documents RelevancyFeedback - either with a reader or a query
             // --------------------------------------------------------------------------------
             if (q == null) {
                 throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
@@ -121,8 +121,8 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
             } else {
 
                 // change to not filter the initial query, only the final query - better samples the document space
-                uffDocs = expandQueryAndReExecute(rsp, params, maxDocumentsToMatch, flags, q, query, sortSpec,
-                        null, targetFqFilters, searcher, mlt, interesting, uffDocs, start, rows);
+                ufDocs = expandQueryAndReExecute(rsp, params, maxDocumentsToMatch, flags, q, query, sortSpec,
+                        null, targetFqFilters, searcher, usfdbk, interesting, ufDocs, start, rows);
             }
 
         } finally {
@@ -131,10 +131,10 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
             }
         }
 
-        if( uffDocs == null ) {
-            uffDocs = new DocListAndSet(); // avoid NPE
+        if( ufDocs == null ) {
+            ufDocs = new DocListAndSet(); // avoid NPE
         }
-        rsp.add( "response", uffDocs.docList );
+        rsp.add( "response", ufDocs.docList );
 
         if( interesting != null ) {
             addInterestingTerms(rsp, termStyle, interesting);
@@ -142,10 +142,10 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
 
         // maybe facet the results
         if (params.getBool(FacetParams.FACET,false)) {
-            addFacet(req, rsp, params, uffDocs);
+            addFacet(req, rsp, params, ufDocs);
         }
 
-        addDebugInfo(req, rsp, q, targetFqFilters, mlt, uffDocs);
+        addDebugInfo(req, rsp, q, targetFqFilters, usfdbk, ufDocs);
     }
 
     private void configureSolrParameters(SolrQueryRequest req, ModifiableSolrParams params, String uniqueKeyField){
@@ -162,7 +162,7 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
         req.setParams(params);
     }
 
-    private DocListAndSet expandQueryAndReExecute(SolrQueryResponse rsp, SolrParams params, int maxDocumentsToMatch, int flags, String q, Query seedQuery, SortSpec sortSpec, List<Query> targetFqFilters, List<Query> ufFqFilters, SolrIndexSearcher searcher, UnsupervisedFeedbackHelper uff, List<InterestingTerm> interesting, DocListAndSet mltDocs, int start, int rows) throws IOException, SyntaxError {
+    private DocListAndSet expandQueryAndReExecute(SolrQueryResponse rsp, SolrParams params, int maxDocumentsToMatch, int flags, String q, Query seedQuery, SortSpec sortSpec, List<Query> targetFqFilters, List<Query> ufFqFilters, SolrIndexSearcher searcher, UnsupervisedFeedbackHelper uff, List<InterestingTerm> interesting, DocListAndSet ufDocs, int start, int rows) throws IOException, SyntaxError {
 
         boolean includeMatch = params.getBool(UnsupervisedFeedbackParams.MATCH_INCLUDE, true);
         int matchOffset = params.getInt(UnsupervisedFeedbackParams.MATCH_OFFSET, 0);
@@ -181,10 +181,10 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
         // This is an iterator, but we only handle the first match
         DocIterator iterator = match.iterator();
         if (iterator.hasNext()) {
-            // do a MoreLikeThis query for each document in results
-            mltDocs = uff.expandQueryAndReExecute(iterator, seedQuery, start, rows, ufFqFilters, interesting, flags, sortSpec.getSort());
+            // do a RelevancyFeedback query for each document in results
+            ufDocs = uff.expandQueryAndReExecute(iterator, seedQuery, start, rows, ufFqFilters, interesting, flags, sortSpec.getSort());
         }
-        return mltDocs;
+        return ufDocs;
     }
 
     private void addInterestingTerms(SolrQueryResponse rsp, UnsupervisedFeedbackParams.TermStyle termStyle, List<InterestingTerm> interesting) {
@@ -204,17 +204,17 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
         }
     }
 
-    private void addFacet(SolrQueryRequest req, SolrQueryResponse rsp, SolrParams params, DocListAndSet mltDocs) {
-        if( mltDocs.docSet == null ) {
+    private void addFacet(SolrQueryRequest req, SolrQueryResponse rsp, SolrParams params, DocListAndSet ufDocs) {
+        if( ufDocs.docSet == null ) {
             rsp.add( "facet_counts", null );
         }
         else {
-            SimpleFacets f = new SimpleFacets(req, mltDocs.docSet, params );
+            SimpleFacets f = new SimpleFacets(req, ufDocs.docSet, params );
             rsp.add( "facet_counts", f.getFacetCounts() );
         }
     }
 
-    private void addDebugInfo(SolrQueryRequest req, SolrQueryResponse rsp, String q, List<Query> mltFqFilters, UnsupervisedFeedbackHelper mlt, DocListAndSet mltDocs) {
+    private void addDebugInfo(SolrQueryRequest req, SolrQueryResponse rsp, String q, List<Query> ufFqFilters, UnsupervisedFeedbackHelper ufhelper, DocListAndSet ufDocs) {
         boolean dbg = req.getParams().getBool(CommonParams.DEBUG_QUERY, false);
         boolean dbgQuery = false, dbgResults = false;
         if (dbg == false){//if it's true, we are doing everything anyway.
@@ -235,15 +235,15 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
         // Copied from StandardRequestHandler... perhaps it should be added to doStandardDebug?
         if (dbg == true) {
             try {
-                NamedList<Object> dbgInfo = SolrPluginUtils.doStandardDebug(req, q, mlt.getRawUFQuery(), mltDocs.docList, dbgQuery, dbgResults);
+                NamedList<Object> dbgInfo = SolrPluginUtils.doStandardDebug(req, q, ufhelper.getRawUFQuery(), ufDocs.docList, dbgQuery, dbgResults);
                 if (null != dbgInfo) {
-                    if (null != mltFqFilters) {
+                    if (null != ufFqFilters) {
                         dbgInfo.add("filter_queries",req.getParams().getParams(CommonParams.FQ));
-                        List<String> fqs = new ArrayList<String>(mltFqFilters.size());
-                        for (Query fq : mltFqFilters) {
+                        List<String> fqs = new ArrayList<String>(ufFqFilters.size());
+                        for (Query fq : ufFqFilters) {
                             fqs.add(QueryParsing.toString(fq, req.getSchema()));
                         }
-                        dbgInfo.add("mlt_filter_queries",fqs);
+                        dbgInfo.add("uf_filter_queries",fqs);
                     }
                     rsp.add("debug", dbgInfo);
                 }
@@ -273,7 +273,7 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
 
     @Override
     public String getDescription() {
-        return "Solr MoreLikeThis";
+        return "Solr RelevancyFeedback";
     }
 
     @Override
@@ -284,7 +284,7 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
     @Override
     public URL[] getDocs() {
         try {
-            return new URL[] { new URL("http://wiki.apache.org/solr/MoreLikeThis") };
+            return new URL[] { new URL("http://wiki.apache.org/solr/RelevancyFeedback") };
         }
         catch( MalformedURLException ex ) { return null; }
     }

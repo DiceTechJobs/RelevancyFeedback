@@ -1,4 +1,4 @@
-package org.dice.solrenhancements.morelikethis;
+package org.dice.solrenhancements.relevancyfeedback;
 
 import org.apache.lucene.search.Query;
 import org.apache.solr.search.DocListAndSet;
@@ -9,10 +9,10 @@ import java.util.List;
 /**
  * Created by simon.hughes on 11/25/14.
  */
-public class MLTResult {
+public class RFResult {
 
-    public final List<MLTTerm> mltTerms;
-    public Query rawMLTQuery;
+    public final List<RFTerm> RFTerms;
+    public Query rawRFQuery;
 
     public Query finalQuery;
     private Query mustMatchQuery = null;
@@ -20,10 +20,10 @@ public class MLTResult {
 
     private DocListAndSet doclist;
 
-    public MLTResult(List<MLTTerm> mltTerms, Query rawMLTQuery){
+    public RFResult(List<RFTerm> RFTerms, Query rawRFQuery){
 
-        this.mltTerms = mltTerms == null? new ArrayList<MLTTerm>() : mltTerms;
-        this.rawMLTQuery = rawMLTQuery;
+        this.RFTerms = RFTerms == null? new ArrayList<RFTerm>() : RFTerms;
+        this.rawRFQuery = rawRFQuery;
     }
 
     public DocListAndSet getDoclist() {

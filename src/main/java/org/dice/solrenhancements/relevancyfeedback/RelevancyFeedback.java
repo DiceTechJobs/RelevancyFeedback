@@ -1,4 +1,4 @@
-package org.dice.solrenhancements.morelikethis;
+package org.dice.solrenhancements.relevancyfeedback;
 
 /**
  * Created by simon.hughes on 9/2/14.
@@ -90,9 +90,9 @@ import java.util.*;
  * IndexReader ir = ...
  * IndexSearcher is = ...
  * <p/>
- * MoreLikeThis mlt = new MoreLikeThis(ir);
+ * RelevancyFeedback rf = new RelevancyFeedback(ir);
  * Reader target = ... // orig source of doc you want to find similarities to
- * Query query = mlt.queryFromDocuments( target);
+ * Query query = rf.queryFromDocuments( target);
  * <p/>
  * Hits hits = is.search(query);
  * // now the usual iteration thru 'hits' - the only thing to watch for is to make sure
@@ -103,7 +103,7 @@ import java.util.*;
  * Thus you:
  * <ol>
  * <li> do your normal, Lucene setup for searching,
- * <li> create a MoreLikeThis,
+ * <li> create a RelevancyFeedback,
  * <li> get the text of the doc you want to find similarities to
  * <li> then call one of the queryFromDocuments() calls to generate a similarity query
  * <li> call the searcher to find the similar docs
@@ -141,7 +141,7 @@ import java.util.*;
  * - optimise: when no termvector support available - used maxNumTermsParsed to limit amount of tokenization
  * </pre>
  */
-public final class MoreLikeThis {
+public final class RelevancyFeedback {
 
     /**
      * Default maximum number of tokens to parse in each example doc field that is not stored with TermVector support.
@@ -253,7 +253,7 @@ public final class MoreLikeThis {
 
 
     /**
-     * mm setting for MLT query
+     * mm setting for RF query
      */
     private String mm = null;
 
@@ -343,7 +343,7 @@ public final class MoreLikeThis {
 
 
     /**
-     * Gets the value of the mlt.mm parameter (mm for the MLT query)
+     * Gets the value of the rf.mm parameter (mm for the RF query)
      *
      * @return - the minimum should match parameter string - follows the normal mm syntax
      * @see #setMm(String)
@@ -353,7 +353,7 @@ public final class MoreLikeThis {
     }
 
     /**
-     * Sets the text for the mlt.mm parameter (mm for the MLT query)
+     * Sets the text for the rf.mm parameter (mm for the RF query)
      *
      * @param mm - minimum should match parameter string - follows the normal mm syntax
      * @see #getMm()
@@ -371,7 +371,7 @@ public final class MoreLikeThis {
     /**
      * Gets the text for the Multiplicative Boost Function
      *
-     * @return the multiplicative boostFunction used in the MLT query
+     * @return the multiplicative boostFunction used in the RF query
      * @see #setBoostFn(String)
      **/
     public String getBoostFn() {
@@ -390,11 +390,11 @@ public final class MoreLikeThis {
     /**
      * Constructor requiring an IndexReader.
      */
-    public MoreLikeThis(IndexReader ir) {
+    public RelevancyFeedback(IndexReader ir) {
         this(ir, new DefaultSimilarity());
     }
 
-    public MoreLikeThis(IndexReader ir, TFIDFSimilarity sim) {
+    public RelevancyFeedback(IndexReader ir, TFIDFSimilarity sim) {
         this.ir = ir;
         this.similarity = sim;
 
@@ -614,7 +614,7 @@ public final class MoreLikeThis {
     }
 
     /**
-     * Sets the field names that must match the target document in the MLT query
+     * Sets the field names that must match the target document in the RF query
      *
      * @param fieldNames the field names that will be used
      */
@@ -623,7 +623,7 @@ public final class MoreLikeThis {
     }
 
     /**
-     * Sets the field names that must match the target document in the MLT query
+     * Sets the field names that must match the target document in the RF query
      *
      * @param fieldNames the field names that will be used
      */
@@ -736,7 +736,7 @@ public final class MoreLikeThis {
     /**
      * Set the set of stopwords.
      * Any word in this set is considered "uninteresting" and ignored.
-     * Even if your Analyzer allows stopwords, you might want to tell the MoreLikeThis code to ignore them, as
+     * Even if your Analyzer allows stopwords, you might want to tell the RelevancyFeedback code to ignore them, as
      * for the purposes of document similarity it seems reasonable to assume that "a stop word is never interesting".
      *
      * @param stopWords set of stopwords, if null it means to allow stop words
@@ -862,7 +862,7 @@ public final class MoreLikeThis {
      * @param docNums the documentIDs of the lucene docs to generate the 'More Like This" query for.
      * @return a query that will return docs queryFromDocuments the passed lucene document ID.
      */
-    public MLTResult like(List<Integer> docNums) throws IOException {
+    public RFResult like(List<Integer> docNums) throws IOException {
 
         Map<String,Map<String, Flt>> fieldTermFreq = new HashMap<String, Map<String, Flt>>();
         Map<String,Map<String, Flt>> mustMatchTerms = new HashMap<String, Map<String, Flt>>();
@@ -874,14 +874,14 @@ public final class MoreLikeThis {
             retrieveTerms(docNum, getDifferentFieldNames(), mustNOTMatchTerms);
         }
 
-        MLTResult mltResult = buildQueryFromFieldTermFrequencies(fieldTermFreq, false);
+        RFResult RFResult = buildQueryFromFieldTermFrequencies(fieldTermFreq, false);
         if(mustMatchTerms.size() > 0){
-            mltResult.setMustMatchQuery(buildMustMatchQuery(mustMatchTerms, true));
+            RFResult.setMustMatchQuery(buildMustMatchQuery(mustMatchTerms, true));
         }
         if(mustNOTMatchTerms.size() > 0){
-            mltResult.setMustNOTMatchQuery(buildMustMatchQuery(mustNOTMatchTerms, false));
+            RFResult.setMustNOTMatchQuery(buildMustMatchQuery(mustNOTMatchTerms, false));
         }
-        return mltResult;
+        return RFResult;
     }
 
     /**
@@ -892,7 +892,7 @@ public final class MoreLikeThis {
      * @param reader a stream reader for the document stream (from the stream.body parameter)*
      * @return a query that will return docs queryFromDocuments the passed Reader.
      */
-    public MLTResult like(String[] fields, Reader reader) throws IOException {
+    public RFResult like(String[] fields, Reader reader) throws IOException {
 
         return like(null, fields, reader);
     }
@@ -903,18 +903,18 @@ public final class MoreLikeThis {
      * @param reader a stream reader for the document stream (from the stream.body parameter)
      * @return a query that will return docs queryFromDocuments the passed Reader.
      */
-    public MLTResult like(Reader reader) throws IOException {
+    public RFResult like(Reader reader) throws IOException {
 
         return like(getStreamHeadfieldNames(), getStreamBodyfieldNames(), reader);
     }
 
-    private MLTResult like(String[] streamHeadfields, String[] streamBodyfields, Reader reader) throws IOException {
+    private RFResult like(String[] streamHeadfields, String[] streamBodyfields, Reader reader) throws IOException {
 
         if(streamBodyfields == null){
             throw new UnsupportedOperationException(
-                    String.format("To use MoreLikeThis to process a document stream, a field list must be specified "
+                    String.format("To use RelevancyFeedback to process a document stream, a field list must be specified "
                                 + "using either the %s parameter or the %s parameter",
-                        MoreLikeThisParams.SIMILARITY_FIELDS, MoreLikeThisParams.STREAM_BODY_FL));
+                        RFParams.SIMILARITY_FIELDS, RFParams.STREAM_BODY_FL));
         }
 
         Map<String,Map<String, Flt>> fieldTermFreq = new HashMap<String, Map<String, Flt>>();
@@ -927,9 +927,9 @@ public final class MoreLikeThis {
         if(getStreamHead() != null){
             if(streamHeadfields == null){
                 throw new UnsupportedOperationException(
-                        String.format("To use MoreLikeThis to process a document stream using the stream.head as input,"
+                        String.format("To use RelevancyFeedback to process a document stream using the stream.head as input,"
                                     +"a field list must be specified using either the %s parameter or the %s parameter",
-                        MoreLikeThisParams.SIMILARITY_FIELDS, MoreLikeThisParams.STREAM_HEAD_FL));
+                        RFParams.SIMILARITY_FIELDS, RFParams.STREAM_HEAD_FL));
             }
             for(String fieldName: streamHeadfields){
                 Map<String, Flt> words = null;
@@ -946,28 +946,28 @@ public final class MoreLikeThis {
         return buildQueryFromFieldTermFrequencies(fieldTermFreq, true);
     }
 
-    private MLTResult buildQueryFromFieldTermFrequencies(Map<String, Map<String, Flt>> fieldTermFreq, boolean contentStreamQuery) throws IOException {
+    private RFResult buildQueryFromFieldTermFrequencies(Map<String, Map<String, Flt>> fieldTermFreq, boolean contentStreamQuery) throws IOException {
         BooleanQuery query = new BooleanQuery();
-        List<MLTTerm> interestingTerms = new ArrayList<MLTTerm>();
-        MLTResult mltResult = new MLTResult(interestingTerms, query);
+        List<RFTerm> interestingTerms = new ArrayList<RFTerm>();
+        RFResult RFResult = new RFResult(interestingTerms, query);
 
         for(String fieldName: fieldTermFreq.keySet()){
             Map<String,Flt> words = fieldTermFreq.get(fieldName);
-            PriorityQueue<MLTTerm> queue = createQueue(fieldName, words, contentStreamQuery);
+            PriorityQueue<RFTerm> queue = createQueue(fieldName, words, contentStreamQuery);
 
-            MLTResult fieldMltResult = buildQueryForField(fieldName, queue, query, contentStreamQuery);
-            mltResult.mltTerms.addAll(fieldMltResult.mltTerms);
+            RFResult fieldRFResult = buildQueryForField(fieldName, queue, query, contentStreamQuery);
+            RFResult.RFTerms.addAll(fieldRFResult.RFTerms);
         }
-        mltResult.rawMLTQuery = SolrPluginUtils.setMinShouldMatch(query, getMm());
-        return mltResult;
+        RFResult.rawRFQuery = SolrPluginUtils.setMinShouldMatch(query, getMm());
+        return RFResult;
     }
 
     /**
      * Build the More queryFromDocuments query from a PriorityQueue and an initial Boolean query
      */
-    private MLTResult buildQueryForField(String fieldName, PriorityQueue<MLTTerm> q, BooleanQuery query, boolean contentStreamQuery) {
+    private RFResult buildQueryForField(String fieldName, PriorityQueue<RFTerm> q, BooleanQuery query, boolean contentStreamQuery) {
 
-        List<MLTTerm> interestingTerms = new ArrayList<MLTTerm>();
+        List<RFTerm> interestingTerms = new ArrayList<RFTerm>();
         int qterms = 0;
         int maxTerms = maxQueryTermsPerField;
         if(maxTerms <= 0){
@@ -977,7 +977,7 @@ public final class MoreLikeThis {
         // to store temporary query so we can later normalize
         BooleanQuery tmpQuery = new BooleanQuery();
         double sumQuaredBoost = 0.0f;
-        MLTTerm cur;
+        RFTerm cur;
         // build temp subquery while computing vector length of query for fields from boosts
         while ((cur = q.pop()) != null) {
 
@@ -1015,11 +1015,11 @@ public final class MoreLikeThis {
 
         double vectorLength = Math.sqrt(sumQuaredBoost);
         if(vectorLength <= 0.0){
-            return new MLTResult(interestingTerms, query);
+            return new RFResult(interestingTerms, query);
         }
 
         buildBoostedNormalizedQuery(fieldName, tmpQuery, query, vectorLength, contentStreamQuery);
-        return new MLTResult(interestingTerms, query);
+        return new RFResult(interestingTerms, query);
     }
 
     private void buildBoostedNormalizedQuery(String fieldName, BooleanQuery tmpQuery, BooleanQuery outQuery, double vectorLength, boolean contentStreamQuery) {
@@ -1054,7 +1054,7 @@ public final class MoreLikeThis {
      *
      * @param words a map of words keyed on the word(String) with Int objects as the values.
      */
-    private PriorityQueue<MLTTerm> createQueue(String fieldName, Map<String, Flt> words, boolean contentStreamQuery) throws IOException {
+    private PriorityQueue<RFTerm> createQueue(String fieldName, Map<String, Flt> words, boolean contentStreamQuery) throws IOException {
         // have collected all words in doc and their freqs
         int numDocs = ir.numDocs();
         FreqQ res = new FreqQ(words.size()); // will order words by score
@@ -1090,9 +1090,9 @@ public final class MoreLikeThis {
             }
             score = (tf * idf);
 
-            MLTTerm mltTerm;
+            RFTerm RFTerm;
             if(isPayloadField(fieldName)){
-                mltTerm = new MLTTerm(
+                RFTerm = new RFTerm(
                         word,        // the word
                         fieldName,   // the field name
                         score,       // overall score
@@ -1105,7 +1105,7 @@ public final class MoreLikeThis {
                 );
             }
             else{
-                mltTerm = new MLTTerm(
+                RFTerm = new RFTerm(
                         word,        // the word
                         fieldName,   // the field name
                         score,       // overall score
@@ -1116,7 +1116,7 @@ public final class MoreLikeThis {
                         contentStreamQuery? this.getStreamFieldBoost(fieldName): this.getFieldBoost(fieldName)
                 );
             }
-            res.insertWithOverflow(mltTerm);
+            res.insertWithOverflow(RFTerm);
         }
         return res;
     }
@@ -1255,7 +1255,7 @@ public final class MoreLikeThis {
     private void addTermWeights(Reader reader, Map<String, Flt> termWeightMap, String fieldName)
             throws IOException {
         if (analyzer == null) {
-            throw new UnsupportedOperationException("To use MoreLikeThis without " +
+            throw new UnsupportedOperationException("To use RelevancyFeedback without " +
                     "term vectors, you must provide an Analyzer");
         }
 
@@ -1324,13 +1324,13 @@ public final class MoreLikeThis {
     /**
      * PriorityQueue that orders words by score.
      */
-    private static class FreqQ extends PriorityQueue<MLTTerm> {
+    private static class FreqQ extends PriorityQueue<RFTerm> {
         FreqQ(int s) {
             super(s);
         }
 
         @Override
-        protected boolean lessThan(MLTTerm aa, MLTTerm bb) {
+        protected boolean lessThan(RFTerm aa, RFTerm bb) {
             return aa.getScore() > bb.getScore();
         }
     }

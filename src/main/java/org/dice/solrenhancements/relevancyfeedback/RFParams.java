@@ -1,6 +1,5 @@
-package org.dice.solrenhancements.morelikethis;
+package org.dice.solrenhancements.relevancyfeedback;
 
-import org.apache.solr.common.params.CommonParams;
 import org.apache.solr.search.QueryParsing;
 
 import java.util.Locale;
@@ -8,9 +7,9 @@ import java.util.Locale;
 /**
  * Created by simon.hughes on 9/4/14.
  */
-public interface MoreLikeThisParams {
-    java.lang.String MLT = "mlt";
-    java.lang.String PREFIX = "mlt.";
+public interface RFParams {
+    java.lang.String RF = "rf";
+    java.lang.String PREFIX = "rf.";
     java.lang.String SIMILARITY_FIELDS = PREFIX + "fl";
     java.lang.String MIN_TERM_FREQ =PREFIX + "mintf";
     java.lang.String MAX_DOC_FREQ = PREFIX + "maxdf";
@@ -28,9 +27,9 @@ public interface MoreLikeThisParams {
 
     java.lang.String QF = PREFIX + "qf";
 
-    // allows user to specify a query, and we use the MLT terms to boost that query
-    java.lang.String MLT_QUERY = PREFIX + "q";
-    java.lang.String MLT_DEFTYPE = PREFIX + QueryParsing.DEFTYPE;
+    // allows user to specify a query, and we use the RF terms to boost that query
+    java.lang.String RF_QUERY = PREFIX + "q";
+    java.lang.String RF_DEFTYPE = PREFIX + QueryParsing.DEFTYPE;
 
     // new to this plugin
     java.lang.String FL_MUST_MATCH      = PREFIX + "fl.match";   // list of fields that must match the target document
@@ -50,7 +49,7 @@ public interface MoreLikeThisParams {
     java.lang.String STREAM_QF = "stream.qf";
     // end new to this plugin
 
-    // the /mlt request handler uses 'rows'
+    // the /rf request handler uses 'rows'
     public final static String DOC_COUNT = PREFIX + "count";
 
     // Do you want to include the original document in the results or not

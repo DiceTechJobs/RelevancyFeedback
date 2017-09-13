@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.dice.solrenhancements.morelikethis;
+package org.dice.solrenhancements.relevancyfeedback;
 
 import com.google.common.base.Strings;
 import org.apache.lucene.queries.payloads.PayloadTermQuery;
@@ -46,13 +46,13 @@ import java.net.URL;
 import java.util.*;
 
 /**
- * Solr MoreLikeThis --
+ * Solr RelevancyFeedback --
  *
  * Return similar documents either based on a single document or based on posted text.
  *
  * @since solr 1.3
  */
-public class DiceMoreLikeThisHandler extends RequestHandlerBase
+public class RelevancyFeedbackHandler extends RequestHandlerBase
 {
     private final static String EDISMAX = ExtendedDismaxQParserPlugin.NAME;
     private String version = null;
@@ -83,10 +83,10 @@ public class DiceMoreLikeThisHandler extends RequestHandlerBase
         }
         // note: set in configureSolrParameters
         String defType = params.get(QueryParsing.DEFTYPE, EDISMAX);
-        String mainQueryDefType = params.get(MoreLikeThisParams.MLT_DEFTYPE, EDISMAX);
+        String mainQueryDefType = params.get(RFParams.RF_DEFTYPE, EDISMAX);
 
         String q = params.get( CommonParams.Q );
-        String mainQ = params.get(MoreLikeThisParams.MLT_QUERY);
+        String mainQ = params.get(RFParams.RF_QUERY);
 
         Query query = null;
         Query mainQuery = null;
@@ -97,7 +97,7 @@ public class DiceMoreLikeThisHandler extends RequestHandlerBase
         QParser mainQueryParser = null;
 
         List<Query> targetFqFilters = null;
-        List<Query> mltFqFilters    = null;
+        List<Query> rfFqFilters    = null;
 
         try {
             if (q != null) {
@@ -111,7 +111,7 @@ public class DiceMoreLikeThisHandler extends RequestHandlerBase
             }
 
             targetFqFilters = getFilters(req, CommonParams.FQ);
-            mltFqFilters    = getFilters(req, MoreLikeThisParams.FQ);
+            rfFqFilters    = getFilters(req, RFParams.FQ);
         } catch (SyntaxError e) {
             throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, e);
         }
@@ -126,13 +126,13 @@ public class DiceMoreLikeThisHandler extends RequestHandlerBase
             throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, e);
         }
 
-        MoreLikeThisHelper mlt = new MoreLikeThisHelper( params, searcher, uniqueKeyField, parser );
+        RFHelper rfhelper = new RFHelper( params, searcher, uniqueKeyField, parser );
 
         // Hold on to the interesting terms if relevant
-        MoreLikeThisParams.TermStyle termStyle = MoreLikeThisParams.TermStyle.get(params.get(MoreLikeThisParams.INTERESTING_TERMS));
+        RFParams.TermStyle termStyle = RFParams.TermStyle.get(params.get(RFParams.INTERESTING_TERMS));
 
-        MLTResult mltResult = null;
-        DocListAndSet mltDocs = null;
+        RFResult RFResult = null;
+        DocListAndSet rfDocs = null;
 
         // Parse Required Params
         // This will either have a single Reader or valid query
@@ -146,22 +146,22 @@ public class DiceMoreLikeThisHandler extends RequestHandlerBase
                 reader = getContentStreamReader(req, reader);
                 q = "NULL - from content stream";
             }
-            // Find documents MoreLikeThis - either with a reader or a query
+            // Find documents RelevancyFeedback - either with a reader or a query
             // --------------------------------------------------------------------------------
             if (reader != null) {
                 // this will only be initialized if used with a content stream (see above)
-                mltResult = mlt.getMoreLikeThisFromContentSteam(reader, start, rows, mltFqFilters, flags, sortSpec.getSort(), mainQuery);
+                RFResult = rfhelper.getMatchesFromContentSteam(reader, start, rows, rfFqFilters, flags, sortSpec.getSort(), mainQuery);
             } else if (q != null) {
                 // Matching options
-                mltResult = getMoreLikeTheseFromQuery(rsp, params, flags, q, query, mainQuery, sortSpec,
-                        targetFqFilters, mltFqFilters, searcher, mlt,  start, rows);
+                RFResult = getMoreLikeTheseFromQuery(rsp, params, flags, q, query, mainQuery, sortSpec,
+                        targetFqFilters, rfFqFilters, searcher, rfhelper,  start, rows);
             } else {
                 throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
-                        "MoreLikeThis requires either a query (?q=) or text to find similar documents.");
+                        "RelevancyFeedback requires either a query (?q=) or text to find similar documents.");
             }
-            if(mltResult != null)
+            if(RFResult != null)
             {
-                mltDocs = mltResult.getDoclist();
+                rfDocs = RFResult.getDoclist();
             }
 
         } finally {
@@ -170,24 +170,24 @@ public class DiceMoreLikeThisHandler extends RequestHandlerBase
             }
         }
 
-        if( mltDocs == null ) {
-            mltDocs = new DocListAndSet(); // avoid NPE
+        if( rfDocs == null ) {
+            rfDocs = new DocListAndSet(); // avoid NPE
         }
-        rsp.add( "response", mltDocs.docList );
-        if(mltResult != null && mltResult.rawMLTQuery != null) {
-            rsp.add(MoreLikeThisParams.PREFIX + "query:", mltResult.rawMLTQuery.toString());
+        rsp.add( "response", rfDocs.docList );
+        if(RFResult != null && RFResult.rawRFQuery != null) {
+            rsp.add(RFParams.PREFIX + "query:", RFResult.rawRFQuery.toString());
         }
 
-        if( mltResult != null && termStyle != MoreLikeThisParams.TermStyle.NONE) {
-            addInterestingTerms(rsp, termStyle, mltResult);
+        if( RFResult != null && termStyle != RFParams.TermStyle.NONE) {
+            addInterestingTerms(rsp, termStyle, RFResult);
         }
 
         // maybe facet the results
         if (params.getBool(FacetParams.FACET,false)) {
-            addFacet(req, rsp, params, mltDocs);
+            addFacet(req, rsp, params, rfDocs);
         }
 
-        addDebugInfo(req, rsp, q, mltFqFilters, mlt, mltResult, mltDocs);
+        addDebugInfo(req, rsp, q, rfFqFilters, rfhelper, RFResult, rfDocs);
     }
 
     private void configureSolrParameters(SolrQueryRequest req, ModifiableSolrParams params, String uniqueKeyField){
@@ -213,22 +213,22 @@ public class DiceMoreLikeThisHandler extends RequestHandlerBase
             }
             if (iter.hasNext()) {
                 throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
-                        "MoreLikeThis does not support multiple ContentStreams");
+                        "RelevancyFeedback does not support multiple ContentStreams");
             }
         }
         return reader;
     }
 
-    private MLTResult getMoreLikeTheseFromQuery(SolrQueryResponse rsp, SolrParams params, int flags,
-                                                String q, Query query, Query mainQuery, SortSpec sortSpec, List<Query> targetFqFilters, List<Query> mltFqFilters, SolrIndexSearcher searcher, MoreLikeThisHelper mlt, int start, int rows) throws IOException, SyntaxError {
+    private RFResult getMoreLikeTheseFromQuery(SolrQueryResponse rsp, SolrParams params, int flags,
+                                               String q, Query query, Query mainQuery, SortSpec sortSpec, List<Query> targetFqFilters, List<Query> rfFqFilters, SolrIndexSearcher searcher, RFHelper rfhelper, int start, int rows) throws IOException, SyntaxError {
 
-        boolean includeMatch = params.getBool(MoreLikeThisParams.MATCH_INCLUDE, true);
-        int matchOffset = params.getInt(MoreLikeThisParams.MATCH_OFFSET, 0);
+        boolean includeMatch = params.getBool(RFParams.MATCH_INCLUDE, true);
+        int matchOffset = params.getInt(RFParams.MATCH_OFFSET, 0);
         // Find the base match
         DocList match = searcher.getDocList(query, targetFqFilters, null, matchOffset, 10000, flags); // only get the first one...
         if(match.matches() == 0 && mainQuery == null){
             throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
-                    String.format("MoreLikeThis was unable to find any documents matching the query: '%s'.", q));
+                    String.format("RelevancyFeedback was unable to find any documents matching the query: '%s'.", q));
         }
 
         if (includeMatch) {
@@ -238,8 +238,8 @@ public class DiceMoreLikeThisHandler extends RequestHandlerBase
         // This is an iterator, but we only handle the first match
         DocIterator iterator = match.iterator();
         if (iterator.hasNext() || mainQuery != null) {
-            // do a MoreLikeThis query for each document in results
-            return mlt.getMoreLikeTheseFromDocs(iterator, start, rows, mltFqFilters, flags, sortSpec.getSort(), mainQuery);
+            // do a RelevancyFeedback query for each document in results
+            return rfhelper.getMatchesFromDocs(iterator, start, rows, rfFqFilters, flags, sortSpec.getSort(), mainQuery);
         }
         return null;
     }
@@ -266,13 +266,13 @@ public class DiceMoreLikeThisHandler extends RequestHandlerBase
         return terms;
     }
 
-    private void addInterestingTerms(SolrQueryResponse rsp, MoreLikeThisParams.TermStyle termStyle, MLTResult mltResult) {
+    private void addInterestingTerms(SolrQueryResponse rsp, RFParams.TermStyle termStyle, RFResult RFResult) {
 
-        List<MLTTerm> mltTerms = mltResult.mltTerms;
-        Collections.sort(mltTerms, MLTTerm.FLD_BOOST_X_SCORE_ORDER);
+        List<RFTerm> RFTerms = RFResult.RFTerms;
+        Collections.sort(RFTerms, RFTerm.FLD_BOOST_X_SCORE_ORDER);
 
-        if( termStyle == MoreLikeThisParams.TermStyle.DETAILS ) {
-            List<InterestingTerm> interesting = extractInterestingTerms(mltResult.rawMLTQuery);
+        if( termStyle == RFParams.TermStyle.DETAILS ) {
+            List<InterestingTerm> interesting = extractInterestingTerms(RFResult.rawRFQuery);
 
             int longest = 0;
             for( InterestingTerm t : interesting ) {
@@ -286,25 +286,25 @@ public class DiceMoreLikeThisHandler extends RequestHandlerBase
             rsp.add( "interestingTerms", it );
         }
         else {
-            List<String> it = new ArrayList<String>( mltTerms.size() );
-            for( MLTTerm mltTerm : mltTerms) {
-                it.add(mltTerm.getWord());
+            List<String> it = new ArrayList<String>( RFTerms.size() );
+            for( RFTerm RFTerm : RFTerms) {
+                it.add(RFTerm.getWord());
             }
             rsp.add( "interestingTerms", it );
         }
     }
 
-    private void addFacet(SolrQueryRequest req, SolrQueryResponse rsp, SolrParams params, DocListAndSet mltDocs) {
-        if( mltDocs.docSet == null ) {
+    private void addFacet(SolrQueryRequest req, SolrQueryResponse rsp, SolrParams params, DocListAndSet rfDocs) {
+        if( rfDocs.docSet == null ) {
             rsp.add( "facet_counts", null );
         }
         else {
-            SimpleFacets f = new SimpleFacets(req, mltDocs.docSet, params );
+            SimpleFacets f = new SimpleFacets(req, rfDocs.docSet, params );
             rsp.add( "facet_counts", f.getFacetCounts() );
         }
     }
 
-    private void addDebugInfo(SolrQueryRequest req, SolrQueryResponse rsp, String q, List<Query> mltFqFilters, MoreLikeThisHelper mlt, MLTResult mltResult, DocListAndSet mltDocs) {
+    private void addDebugInfo(SolrQueryRequest req, SolrQueryResponse rsp, String q, List<Query> rfFqFilters, RFHelper rfHelper, RFResult RFResult, DocListAndSet rfDocs) {
 
         boolean dbg = req.getParams().getBool(CommonParams.DEBUG_QUERY, false);
         boolean dbgQuery = false, dbgResults = false;
@@ -324,25 +324,25 @@ public class DiceMoreLikeThisHandler extends RequestHandlerBase
             dbgResults = true;
         }
         // Copied from StandardRequestHandler... perhaps it should be added to doStandardDebug?
-        if (dbg == true && mltResult != null) {
+        if (dbg == true && RFResult != null) {
             try {
 
-                NamedList<String> it = getMltTermsForDebug(mltResult);
+                NamedList<String> it = getRfTermsForDebug(RFResult);
 
                 NamedList<Object> dbgInfo = new NamedList<Object>();
-                NamedList<Object> stdDbg = SolrPluginUtils.doStandardDebug(req, q, mltResult.getFinalQuery(), mltDocs.docList, dbgQuery, dbgResults);
+                NamedList<Object> stdDbg = SolrPluginUtils.doStandardDebug(req, q, RFResult.getFinalQuery(), rfDocs.docList, dbgQuery, dbgResults);
                 if (null != dbgInfo) {
                     rsp.add("debug", dbgInfo);
-                    dbgInfo.add( "mltTerms", it );
+                    dbgInfo.add( "RFTerms", it );
                     dbgInfo.addAll(stdDbg);
 
-                    if (null != mltFqFilters) {
+                    if (null != rfFqFilters) {
                         dbgInfo.add("filter_queries",req.getParams().getParams(CommonParams.FQ));
-                        List<String> fqs = new ArrayList<String>(mltFqFilters.size());
-                        for (Query fq : mltFqFilters) {
+                        List<String> fqs = new ArrayList<String>(rfFqFilters.size());
+                        for (Query fq : rfFqFilters) {
                             fqs.add(QueryParsing.toString(fq, req.getSchema()));
                         }
-                        dbgInfo.add("mlt_filter_queries",fqs);
+                        dbgInfo.add("rf_filter_queries",fqs);
                     }
                 }
             } catch (Exception e) {
@@ -352,24 +352,24 @@ public class DiceMoreLikeThisHandler extends RequestHandlerBase
         }
     }
 
-    private NamedList<String> getMltTermsForDebug(MLTResult mltResult) {
+    private NamedList<String> getRfTermsForDebug(RFResult RFResult) {
         NamedList<String> it = new NamedList<String>();
-        if(mltResult == null){
+        if(RFResult == null){
             return it;
         }
 
-        List<MLTTerm> mltTerms = mltResult.mltTerms;
-        Collections.sort(mltTerms);
+        List<RFTerm> RFTerms = RFResult.RFTerms;
+        Collections.sort(RFTerms);
         int longestWd = 0;
         int longestFieldName = 0;
-        for( MLTTerm mltTerm : mltTerms) {
-            longestWd = Math.max(mltTerm.getWord().length(), longestWd);
-            longestFieldName = Math.max(mltTerm.getFieldName().length(), longestFieldName);
+        for( RFTerm RFTerm : RFTerms) {
+            longestWd = Math.max(RFTerm.getWord().length(), longestWd);
+            longestFieldName = Math.max(RFTerm.getFieldName().length(), longestFieldName);
         }
-        for( MLTTerm mltTerm : mltTerms) {
-            String paddedfieldName = Strings.padEnd(mltTerm.getFieldName(), longestFieldName, ' ');
-            String paddedWd = Strings.padEnd(mltTerm.getWord(), longestWd, ' ');
-            it.add(paddedfieldName, paddedWd + " - " + mltTerm.valuesToString() );
+        for( RFTerm RFTerm : RFTerms) {
+            String paddedfieldName = Strings.padEnd(RFTerm.getFieldName(), longestFieldName, ' ');
+            String paddedWd = Strings.padEnd(RFTerm.getWord(), longestWd, ' ');
+            it.add(paddedfieldName, paddedWd + " - " + RFTerm.valuesToString() );
         }
         return it;
     }
@@ -393,7 +393,7 @@ public class DiceMoreLikeThisHandler extends RequestHandlerBase
 
     @Override
     public String getDescription() {
-        return "Dice custom MoreLikeThis handler";
+        return "Dice custom RelevancyFeedback handler";
     }
 
     @Override
@@ -412,7 +412,7 @@ public class DiceMoreLikeThisHandler extends RequestHandlerBase
             while (resources.hasMoreElements()) {
                 URL url = resources.nextElement();
                 /* let's not read other jar's manifests */
-                if (!url.toString().contains("DiceSolrEnhancements-1.0.jar")) continue;
+                if (!url.toString().contains("DiceRelevancyFeedback-1.0.jar")) continue;
                 InputStream reader = url.openStream();
                 while(reader.available() > 0) {
                     char c = (char) reader.read();
@@ -433,7 +433,7 @@ public class DiceMoreLikeThisHandler extends RequestHandlerBase
     @Override
     public URL[] getDocs() {
         try {
-            return new URL[] { new URL("http://wiki.apache.org/solr/MoreLikeThis") };
+            return new URL[] { new URL("http://wiki.apache.org/solr/RelevancyFeedback") };
         }
         catch( MalformedURLException ex ) { return null; }
     }

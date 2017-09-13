@@ -88,7 +88,7 @@ import java.util.*;
  * IndexReader ir = ...
  * IndexSearcher is = ...
  * <p/>
- * MoreLikeThis uf = new MoreLikeThis(ir);
+ * RelevancyFeedback uf = new RelevancyFeedback(ir);
  * Reader target = ... // orig source of doc you want to find similarities to
  * Query query = uf.queryFromDocuments( target);
  * <p/>
@@ -101,7 +101,7 @@ import java.util.*;
  * Thus you:
  * <ol>
  * <li> do your normal, Lucene setup for searching,
- * <li> create a MoreLikeThis,
+ * <li> create a RelevancyFeedback,
  * <li> get the text of the doc you want to find similarities to
  * <li> then call one of the queryFromDocuments() calls to generate a similarity query
  * <li> call the searcher to find the similar docs
@@ -317,7 +317,7 @@ public final class UnsupervisedFeedback {
     /**
      * Gets the text for the Multiplicative Boost Function
      *
-     * @return the multiplicative boostFunction used in the MLT query
+     * @return the multiplicative boostFunction used in the RF query
      * @see #setBoostFn(String)
      **/
     public String getBoostFn() {
@@ -568,7 +568,7 @@ public final class UnsupervisedFeedback {
     /**
      * Set the set of stopwords.
      * Any word in this set is considered "uninteresting" and ignored.
-     * Even if your Analyzer allows stopwords, you might want to tell the MoreLikeThis code to ignore them, as
+     * Even if your Analyzer allows stopwords, you might want to tell the RelevancyFeedback code to ignore them, as
      * for the purposes of document similarity it seems reasonable to assume that "a stop word is never interesting".
      *
      * @param stopWords set of stopwords, if null it means to allow stop words
@@ -838,9 +838,9 @@ public final class UnsupervisedFeedback {
                 score = tf * idf;
             }
 
-            USField mltField;
+            USField usField;
             if(isPayloadField(fieldName)){
-                mltField = new USField(
+                usField = new USField(
                         word,        // the word
                         fieldName,   // the field name
                         score,       // overall score
@@ -851,7 +851,7 @@ public final class UnsupervisedFeedback {
                 );
             }
             else{
-                mltField = new USField(
+                usField = new USField(
                         word,        // the word
                         fieldName,   // the field name
                         score,       // overall score
@@ -860,7 +860,7 @@ public final class UnsupervisedFeedback {
                         docFreq     // freq in all docs
                 );
             }
-            res.insertWithOverflow(mltField);
+            res.insertWithOverflow(usField);
         }
         return res;
     }
@@ -979,7 +979,7 @@ public final class UnsupervisedFeedback {
     private void addTermWeights(Reader r, Map<String, Flt> termWeightMap, String fieldName)
             throws IOException {
         if (analyzer == null) {
-            throw new UnsupportedOperationException("To use MoreLikeThis without " +
+            throw new UnsupportedOperationException("To use RelevancyFeedback without " +
                     "term vectors, you must provide an Analyzer");
         }
         TokenStream ts = analyzer.tokenStream(fieldName, r);

@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * Helper class for MoreLikeThis that can be called from other request handlers
+ * Helper class for RelevancyFeedback that can be called from other request handlers
  */
 public class UnsupervisedFeedbackHelper
 {
@@ -51,7 +51,7 @@ public class UnsupervisedFeedbackHelper
         String[] fields = splitList.split( required.get(UnsupervisedFeedbackParams.SIMILARITY_FIELDS) );
         if( fields.length < 1 ) {
             throw new SolrException( SolrException.ErrorCode.BAD_REQUEST,
-                    "MoreLikeThis requires at least one similarity field: "+ UnsupervisedFeedbackParams.SIMILARITY_FIELDS );
+                    "RelevancyFeedback requires at least one similarity field: "+ UnsupervisedFeedbackParams.SIMILARITY_FIELDS );
         }
 
         this.uf = new UnsupervisedFeedback( reader ); // TODO -- after LUCENE-896, we can use , searcher.getSimilarity() );
@@ -156,7 +156,6 @@ public class UnsupervisedFeedbackHelper
             terms.add(it);
         }
         // alternatively we could use
-        // mltquery.extractTerms( terms );
         Collections.sort(terms, InterestingTerm.BOOST_ORDER);
     }
 
