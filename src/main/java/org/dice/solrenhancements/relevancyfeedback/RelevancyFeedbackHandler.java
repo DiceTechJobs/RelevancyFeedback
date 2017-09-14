@@ -82,8 +82,8 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
             flags |= SolrIndexSearcher.GET_SCORES;
         }
         // note: set in configureSolrParameters
-        String defType = params.get(QueryParsing.DEFTYPE, EDISMAX);
-        String mainQueryDefType = params.get(RFParams.RF_DEFTYPE, EDISMAX);
+        String userQdefType = params.get(QueryParsing.DEFTYPE, EDISMAX);
+        String rfDefType = params.get(RFParams.RF_DEFTYPE, EDISMAX);
 
         String userQ = params.get( CommonParams.Q );
         String rfQ = params.get(RFParams.RF_QUERY);
@@ -100,12 +100,12 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
 
         try {
             if (rfQ != null) {
-                rfQueryParser = QParser.getParser(rfQ, defType, req);
+                rfQueryParser = QParser.getParser(rfQ, rfDefType, req);
                 rfQuery = rfQueryParser.getQuery();
                 sortSpec = rfQueryParser.getSort(true);
             }
             else{
-                rfQueryParser = QParser.getParser(null, defType, req);
+                rfQueryParser = QParser.getParser(null, rfDefType, req);
                 sortSpec = rfQueryParser.getSort(true);
             }
 
@@ -117,7 +117,7 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
 
         try {
             if (userQ != null) {
-                userQueryParser = QParser.getParser(userQ, mainQueryDefType, req);
+                userQueryParser = QParser.getParser(userQ, userQdefType, req);
                 userQuery = userQueryParser.getQuery();
             }
 
