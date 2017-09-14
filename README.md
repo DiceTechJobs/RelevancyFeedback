@@ -17,7 +17,7 @@ Please see the official SOLR guidelines for registering plugins with solr. This 
 - [Adding custom plugins in Solr cloud](https://lucene.apache.org/solr/guide/6_6/adding-custom-plugins-in-solrcloud-mode.html)
  
 # Relevancy Feedback Plugin
-An example request handler configuration for the solrconfig.xml is shown below, with comments outlining the main parameters:
+An **example request handler configuration** for the solrconfig.xml is shown below, with comments outlining the main parameters:
 ```$xml
 <requestHandler name="/rf" class="org.dice.solrenhancements.relevancyfeedback.RelevancyFeedbackHandler">
         <lst name="defaults">
@@ -85,8 +85,75 @@ An example request handler configuration for the solrconfig.xml is shown below, 
         </lst>
 </requestHandler>
 ```
-### Parameters
+#### Example Request
+[http://localhost:8983/solr/Jobs/rf?q=id:11f407d319d6cc707437fad874a097c0 id:a2fd2f2e34667d61fadcdcabfd359cf4&rows=10&df=title&fl=title,skills,geoCode,city,state&wt=json](http://localhost:8983/solr/Jobs/rf?q=id:11f407d319d6cc707437fad874a097c0 id:a2fd2f2e34667d61fadcdcabfd359cf4&rows=10&df=title&fl=title,skills,geoCode,city,state&wt=json)
 
+#### Example Response
+```$json
+{
+  "match":{
+      "numFound":2,
+      "start":0,
+      "docs":[
+          {
+            "id":"a2fd2f2e34667d61fadcdcabfd359cf4",        
+            "title":"Console AAA Sports Video Game Programmer.",
+            "skills":["Sports Game Experience a plus.",
+              "2-10 years plus Console AAA Video Game Programming Experience"],
+            "geocode":"38.124447,-122.55051",
+            "city":"Novato",
+            "state":"CA"
+          },
+          {
+            "id":"11f407d319d6cc707437fad874a097c0",
+            "title":"Game Engineer - Creative and Flexible Work Environment!",
+            "skills":["3D Math",
+              "Unity3d",
+              "C#",
+              "3D Math - game programming",
+              "game programming",
+              "C++",
+              "Java"],
+            "geocode":"33.97331,-118.243614",
+            "city":"Los Angeles",
+            "state":"CA"
+          }
+      ]
+  },
+  "response":{
+      "numFound":5333,
+      "start":0,
+      "docs":[
+          {
+            "title":"Software Design Engineer 3 (Game Developer)",
+            "skills":["C#",
+              "C++",
+              "Unity"],
+            "geocode":"47.683647,-122.12183",
+            "city":"Redmond",
+            "state":"WA"
+          },
+          {          
+            "title":"Game Server Engineer - MMO Mobile Gaming Start-Up!",
+            "skills":["AWS",
+              "Node.JS",
+              "pubnub",
+              "Websockets",
+              "pubnub - Node.JS",
+              "Vagrant",
+              "Linux",
+              "Git",
+              "MongoDB",
+              "Jenkins",
+              "Docker"],
+            "geocode":"37.777115,-122.41733",
+            "city":"San Francisco",
+            "state":"CA"
+          },...
+      ]
+   }
+}
+```
 
 # Unsupervised Feedback (Blind Feedback) Plugin
 An example request handler configuration for the solrconfig.xml is shown below, with comments outlining the main parameters:
@@ -130,4 +197,58 @@ An example request handler configuration for the solrconfig.xml is shown below, 
             <bool name="uf.logtf">false</bool>
         </lst>
 </requestHandler>
+```
+#### Example Request
+[http://localhost:8983/solr/DiceJobsCP/ufselect?q=Machine Learning Engineer&start=0&rows=10&uf.logtf=false&fl=title,skills,geoCode,city,state&fq={!geofilt sfield=jobEndecaGeoCode d=48 pt=39.6955,-105.0841}&wt=json](http://localhost:8983/solr/DiceJobsCP/ufselect?q=Machine Learning Engineer&start=0&rows=10&uf.logtf=false&fl=title,skills,geoCode,city,state&fq={!geofilt sfield=jobEndecaGeoCode d=48 pt=39.6955,-105.0841}&wt=json)
+
+#### Example Response
+```$json
+{
+  "match":
+  {
+    "numFound":7729,
+    "start":0,
+    "docs":[
+      {
+        "title":"NLP/Machine Learning Engineer",
+        "skills":["Linux",
+          "NLP (Natural Language Processing)",
+          "SQL",
+          "Bash",
+          "Python",
+          "ML (Machine Learning)",
+          "JavaScript",
+          "Java"],
+        "geocode":"42.35819,-71.050674",
+        "city":"Boston",
+        "state":"MA"
+      },
+      {
+        "title":"Machine Learning Engineer",
+        "skills":["machine learning",
+          "java",
+          "scala"],
+        "geocode":"47.60473,-122.32594",
+        "city":"Seattle",
+        "state":"WA"
+      },
+      {
+        "title":"Machine Learning Engineer - REMOTE!",
+        "skills":["Neo4j",
+          "Hadoop",
+          "gensim",
+          "gensim - C++",
+          "Java",
+          "R",
+          "MongoDB",
+          "elastic search",
+          "sci-kit learn",
+          "Python",
+          "C++"],
+        "geocode":"37.777115,-122.41733",
+        "city":"San Francisco",
+        "state":"CA"
+        },...
+    ]
+}
 ```
