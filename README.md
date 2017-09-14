@@ -57,8 +57,7 @@ An **example request handler configuration** for the solrconfig.xml is shown bel
             <!-- q parameter -  If you want to execute one query, and use the rf query to boost the results (e.g. for personalizing search), 
             	 pass the user's query into this parameter. Can take regular query syntax e.g.rf.q={!edismax df=title qf=.... v=$qq}&qq=Java
             	 The regular q parameter is reserved for the rf query (see abpve)
-            
-			-->
+            -->
             <str name="q"></str>
 
             <!-- rf.q parameter - Note that the regular q parameter is used only for personalized search scenarios, where you have a main query
@@ -78,15 +77,15 @@ An **example request handler configuration** for the solrconfig.xml is shown bel
             <!-- Fields used for processing documents posted to the stream.body and stream.head parameters in a POST call -->
 			<str  name="stream.head.fl">title,title_syn</str>
             <str  name="stream.body.fl">extractSkills,extractTitles</str>
+            
             <!-- Specifies the separate set of field weights to apply when procesing a document posted to the request handler via the 
-                 stream.body and stream.head parameters 
-            -->
-    		<str  name="stream.qf">extractSkills^4.5 extractTitles^2.25 title^3.0 title_syn^3.0</str>           
+                 stream.body and stream.head parameters -->
+            <str  name="stream.qf">extractSkills^4.5 extractTitles^2.25 title^3.0 title_syn^3.0</str>           
         </lst>
 </requestHandler>
 ```
 #### Example Request
-[http://localhost:8983/solr/Jobs/rf?q=id:11f407d319d6cc707437fad874a097c0 id:a2fd2f2e34667d61fadcdcabfd359cf4&rows=10&df=title&fl=title,skills,geoCode,city,state&wt=json](http://localhost:8983/solr/Jobs/rf?q=id:11f407d319d6cc707437fad874a097c0 id:a2fd2f2e34667d61fadcdcabfd359cf4&rows=10&df=title&fl=title,skills,geoCode,city,state&wt=json)
+[http://localhost:8983/solr/Jobs/rf?q=id:11f407d319d6cc707437fad874a097c0+id:a2fd2f2e34667d61fadcdcabfd359cf4&rows=10&df=title&fl=title,skills,geoCode,city,state&wt=json](http://localhost:8983/solr/Jobs/rf?q=id:11f407d319d6cc707437fad874a097c0+id:a2fd2f2e34667d61fadcdcabfd359cf4&rows=10&df=title&fl=title,skills,geoCode,city,state&wt=json)
 
 #### Example Response
 ```$json
@@ -184,8 +183,8 @@ An example request handler configuration for the solrconfig.xml is shown below, 
             <bool name="uf.boost">true</bool>
             <!-- Relative per-field boosts on the extracted terms (similar to edismax qf parameter -->
             <!-- NOTE: with  uf.normflboosts=true, all terms are normalized so that the total importance of each
-            	field on the query is the same, then these relative boosts are applied per field
-            -->
+            	field on the query is the same, then these relative boosts are applied per field-->
+            
             <str  name="uf.qf">skillsFromskills^4.5 titleFromJobTitle^6.0</str>
             
             <!-- Returns the top k terms (see regular solr MLT handler) -->
@@ -199,7 +198,7 @@ An example request handler configuration for the solrconfig.xml is shown below, 
 </requestHandler>
 ```
 #### Example Request
-[http://localhost:8983/solr/DiceJobsCP/ufselect?q=Machine Learning Engineer&start=0&rows=10&uf.logtf=false&fl=title,skills,geoCode,city,state&fq={!geofilt sfield=jobEndecaGeoCode d=48 pt=39.6955,-105.0841}&wt=json](http://localhost:8983/solr/DiceJobsCP/ufselect?q=Machine Learning Engineer&start=0&rows=10&uf.logtf=false&fl=title,skills,geoCode,city,state&fq={!geofilt sfield=jobEndecaGeoCode d=48 pt=39.6955,-105.0841}&wt=json)
+[http://localhost:8983/solr/DiceJobsCP/ufselect?q=Machine+Learning+Engineer&start=0&rows=10&uf.logtf=false&fl=title,skills,geoCode,city,state&fq={!geofilt+sfield=jobEndecaGeoCode+d=48+pt=39.6955,-105.0841}&wt=json](http://localhost:8983/solr/DiceJobsCP/ufselect?q=Machine+Learning+Engineer&start=0&rows=10&uf.logtf=false&fl=title,skills,geoCode,city,state&fq={!geofilt+sfield=jobEndecaGeoCode+d=48+pt=39.6955,-105.0841}&wt=json)
 
 #### Example Response
 ```$json
