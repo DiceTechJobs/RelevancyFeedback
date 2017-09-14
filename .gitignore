@@ -28,7 +28,7 @@ hs_err_pid*
 **/.idea/tasks.xml
 .idea
 
-target/*
+#target/*
 target/classes/
 target/maven-archiver/*
 target/maven-status/*
