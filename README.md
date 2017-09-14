@@ -59,6 +59,8 @@ An **example request handler configuration** for the solrconfig.xml is shown bel
             	 The regular q parameter is reserved for the rf query (see abpve)
             -->
             <str name="q"></str>
+            <!-- Query parser to use for the q query, if passed -->
+            <str name="defType"></str>
 
             <!-- rf.q parameter - Note that the regular q parameter is used only for personalized search scenarios, where you have a main query
             	 and you want to use the rf query generated to boost the main queries documents. Typically the rf.q query is a query that identifies
