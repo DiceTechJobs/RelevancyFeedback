@@ -38,17 +38,22 @@ An **example request handler configuration** for the solrconfig.xml is shown bel
             <str  name="rf.qf">skillFromSkill^3 extractTitles^4.5</str>
             
             <int  name="rows">10</int>
-
+            
+            <!-- How many terms to extract per field (max) -->
             <int  name="rf.maxflqt">10</int>
             <bool name="rf.boost">true</bool>
             
-            <!-- normalize the weights for terms in each field (custom to dice MLT) -->
+            <!-- normalize the weights for terms in each field (custom to dice rf, not present in solr MLT) -->
             <bool name="rf.normflboosts">true</bool>
+            
+            <!-- Take the raw term frequencies (false) or log of the term frequenies (true) -->
             <bool name="rf.logtf">true</bool>
             
             <!-- Minimum should match settings for the rf query - determines what proportion of the terms have to match -->
             <!-- See Solr edismax mm parameter for specifics --> 
             <bool name="rf.mm">25%</bool>            
+            
+            <!-- Returns the top k terms (see regular solr MLT handler) -->
             <str  name="rf.interestingTerms">details</str>
             
             <!-- Turns the rf query into a boost query using a multiplicative boost, allowing for boosting -->
@@ -71,16 +76,29 @@ An **example request handler configuration** for the solrconfig.xml is shown bel
             <!-- query parser to use for the rf.q query -->
             <str name="rf.defType"></str>
             
-            <!-- Settings for personalized search - use the regular parameter names for the query parser defined by rf.defType parameter -->
+            <!-- Settings for personalized search - use the regular parameter names for the query parser defined by defType parameter -->
             <str name="df">title</str>
             <str name="qf"> company_text^0.01 title^12 skill^4 description^0.3</str>
             <str name="pf2">company_text^0.01 title^12 skill^4 description^0.6</str> 
             
+            <!-- Content based recommendations settings (post a document to the endpoint in a POST request). The stream.body and stream.head are form parameters -->
+            
             <!-- Fields used for processing documents posted to the stream.body and stream.head parameters in a POST call -->
-			<str  name="stream.head.fl">title,title_syn</str>
+            <str  name="stream.head.fl">title,title_syn</str>
             <str  name="stream.body.fl">extractSkills,extractTitles</str>
             
-            <!-- Specifies the separate set of field weights to apply when procesing a document posted to the request handler via the 
+            <!-- pass a url in this parameter for Solr to download the webpage, and process the Html using the fields configured in the stream.qf parameters -->
+            <str  name="stream.url"></str>
+            
+            <!-- Note that we have two different content stream fields to pass over in the POST request. This allows different analyzers to be appkied to each. 
+            For instance, we pass the job title into the stream.head field and parse out job titles, while we pass the job description to the stream.head parameter 
+            to parse out skills -->
+            <!-- Pass the document body in this parameter as a form parameter. Analysed using the stream.body.fl fields-->
+            <str  name="stream.body"></str>
+            <!-- Pass the second document field in this parameter. Analysed using the stream.head.fl fields-->
+            <str  name="stream.head"></str>
+            
+            <!-- Specifies a separate set of field weights to apply when procesing a document posted to the request handler via the 
                  stream.body and stream.head parameters -->
             <str  name="stream.qf">extractSkills^4.5 extractTitles^2.25 title^3.0 title_syn^3.0</str>           
         </lst>
