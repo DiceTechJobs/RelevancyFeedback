@@ -7,7 +7,7 @@ Dice.com's solr plugins for performing personalized search, and recommendations 
 Current branch is compiled for Solr 5.4. I will be adding branches compiled against Solr 6 versions shortly. If there is a particular version of Solr you need this for, please create a GitHub issue and I'll see what I can do. 
  
 # Importing into SOLR
-Please see the official SOLR guidelines for registering plugins with solr.
+Please see the official SOLR guidelines for registering plugins with solr. This basically involves simply dropping the 
 
 - [Solr Plugins](https://wiki.apache.org/solr/SolrPlugins)
 - [Adding custom plugins in Solr cloud](https://lucene.apache.org/solr/guide/6_6/adding-custom-plugins-in-solrcloud-mode.html)
