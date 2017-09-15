@@ -9,7 +9,7 @@ import java.util.Comparator;
  */
 public class InterestingTerm
 {
-    public Term term;
+    public String term;
     public float boost;
 
     public static Comparator<InterestingTerm> BOOST_ORDER = new Comparator<InterestingTerm>() {

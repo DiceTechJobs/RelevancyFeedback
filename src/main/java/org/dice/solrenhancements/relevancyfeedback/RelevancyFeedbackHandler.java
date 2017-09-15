@@ -18,7 +18,6 @@
 package org.dice.solrenhancements.relevancyfeedback;
 
 import com.google.common.base.Strings;
-import org.apache.lucene.queries.payloads.PayloadTermQuery;
 import org.apache.lucene.search.BooleanClause;
 import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Query;
@@ -243,25 +242,15 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
         return null;
     }
 
-    private List<InterestingTerm> extractInterestingTerms(Query query){
+    private List<InterestingTerm> extractInterestingTerms(List<RFTerm> mltTerms){
         List<InterestingTerm> terms = new ArrayList<InterestingTerm>();
-        List clauses = ((BooleanQuery)query).clauses();
-        for( Object o : clauses ) {
-            Query q = ((BooleanClause)o).getQuery();
+        for( RFTerm term : mltTerms) {
             InterestingTerm it = new InterestingTerm();
-            it.boost = q.getBoost();
-            if(q instanceof TermQuery) {
-                TermQuery tq = (TermQuery)q;
-                it.term = tq.getTerm();
-            }
-            else if(q instanceof PayloadTermQuery){
-                PayloadTermQuery ptq = (PayloadTermQuery)q;
-                it.term = ptq.getTerm();
-            }
+            it.term = term.getWord();
+            it.boost = term.getBoostedScore();
             terms.add(it);
         }
         Collections.sort(terms, InterestingTerm.BOOST_ORDER);
-
         return terms;
     }
 
@@ -271,16 +260,16 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
         Collections.sort(RFTerms, RFTerm.FLD_BOOST_X_SCORE_ORDER);
 
         if( termStyle == RFParams.TermStyle.DETAILS ) {
-            List<InterestingTerm> interesting = extractInterestingTerms(RFResult.rawRFQuery);
+            List<InterestingTerm> interesting = extractInterestingTerms(RFResult.RFTerms);
 
             int longest = 0;
             for( InterestingTerm t : interesting ) {
-                longest = Math.max(t.term.toString().length(), longest);
+                longest = Math.max(t.term.length(), longest);
             }
 
             NamedList<Float> it = new NamedList<Float>();
             for( InterestingTerm t : interesting ) {
-                it.add( Strings.padEnd(t.term.toString(), longest, ' '), t.boost );
+                it.add( Strings.padEnd(t.term, longest, ' '), t.boost );
             }
             rsp.add( "interestingTerms", it );
         }

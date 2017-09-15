@@ -82,7 +82,7 @@ public class RFTerm implements Comparable<RFTerm> {
         return Strings.padStart(formatted, 5, ' ');
     }
 
-    private float getBoostedScore(){
+    public float getBoostedScore(){
         return this.getFieldBoost() * this.getScore();
     }
 
