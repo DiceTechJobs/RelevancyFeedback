@@ -271,3 +271,9 @@ An example request handler configuration for the solrconfig.xml is shown below, 
     ]
 }
 ```
+
+### Isn't this just the MLT Handler?
+While it is looesly based on the Solr MLT handler code and algorithm (which is just the Rocchio algorithm), there are some key differences in the algorithm design. The MLT handler takes the top k terms across all configured fields when constructing the MLT query. If you have a field that has a broader vocabulary than the other fields, the average document frequency of a term will be lower than in other fields with smaller vocabularies. This means that these terms will have high relative idf scores and tend to dominate the top terms selected by the Solr MLT handler. Our request handler takes the top k terms per field. It also ensure that that no matter how many terms are matched per field (up to the configured limit), that field has the same weighting in the resulting query as all other fields, before the field specific weights specified in the rf.qf parameter are applied. This is the second problem with the Solr MLT handler that we address. We also provide a lot of extra functionality. We allow for passing in of content streams, matching against multiple documents (more like 'THESE' as opposed to more like 'this'), applying the boost query parser to the resulting MLT query to allow for any arbitrary solr boost to be applied (multiplicative). And we support the mm parameter, so we can force documents to come back that only match a set % of the top terms.
+
+### Contact Details
+If you have a feature request, please submit it to the issues list. If you have questions, that is also a good place to post them, but you can also reach out to me at simon.hughes@dice.com if you don't here back.
