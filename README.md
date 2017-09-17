@@ -278,11 +278,11 @@ While it is loosely based on the Solr MLT handler code and algorithm (which is j
 ### Important Considerations When using for Personalized Search
 If you wish to use this to perform search personalization, as demonstrated in my Lucene Revolution 2017 talk, you need to pass in the user's current search query using the regular q parameter, and the information used to generated the rocchio query is passed via the rf.q parameter (when using documents to generate the Rocchio query) or via the content stream parameters (rf.stream.head and rf.stream.body, which take strings of content). Note however, that the boosts applied to the terms in the rocchio query not of comparative weights to those in your user query, due to the process of normalization that the algorithm applies. So you will need to experiment with different rf.qf values until you find the right level of influence on your query, based on your search configuration. Also, given that the rocchio query generated for each user is likely the same across the search session, a more efficent way of using this to do personalization is simply to use the RF handler to generate the rochio query for you once when the user logs in, cache this query, and then use it as a boost query (within your regular search request handler) for personalizing subsequent user searches.
 
-### Contact Details
-If you have a feature request, please submit it to the issues list. If you have questions, that is also a good place to post them, but you can also reach out to me at simon.hughes@dice.com if you don't here back.
-
 ### Potential Enhancements
 Aside from ensuring this works with more versions of solr (please leave feedback as to which versions you all want), there are a number of possible enhancements:
 
 - **Relevancy Feedback Handler** Allow the learning of negative terms from the negative examples (if supplied - needs a separate query parameter), then implement using negative boosting.
 - **Unsupervised Feedback (Blind Feedback)** Use the *positional relevance model* detailed in this paper: http://dl.acm.org/citation.cfm?id=1835546. This uses only terms found near the query's terms in the document, as these are generally more relevant than using the whole document. The highlighter component can presumably be used as a reference to determine how to get this information from the postings list, or maybe even used directly to get this information.
+
+### Contact Details
+If you have a feature request, please submit it to the issues list. If you have questions, that is also a good place to post them, but you can also reach out to me at simon.hughes@dice.com if you don't here back.
