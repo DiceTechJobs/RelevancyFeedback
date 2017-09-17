@@ -280,3 +280,9 @@ If you wish to use this to perform search personalization, as demonstrated in my
 
 ### Contact Details
 If you have a feature request, please submit it to the issues list. If you have questions, that is also a good place to post them, but you can also reach out to me at simon.hughes@dice.com if you don't here back.
+
+### Potential Enhancements
+Aside from ensuring this works with more versions of solr (please leave feedback as to which versions you all want), there are a number of possible enhancements:
+
+- **Relevancy Feedback Handler** Allow the learning of negative terms from the negative examples (if supplied - needs a separate query parameter), then implement using negative boosting.
+- **Unsupervised Feedback (Blind Feedback)** Use the *positional relevance model* detailed in this paper: http://dl.acm.org/citation.cfm?id=1835546. This uses only terms found near the query's terms in the document, as these are generally more relevant than using the whole document. The highlighter component can presumably be used as a reference to determine how to get this information from the postings list, or maybe even used directly to get this information.
