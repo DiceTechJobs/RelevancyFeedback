@@ -81,8 +81,11 @@ An **example request handler configuration** for the solrconfig.xml is shown bel
             <str name="qf"> company_text^0.01 title^12 skill^4 description^0.3</str>
             <str name="pf2">company_text^0.01 title^12 skill^4 description^0.6</str> 
             
-            <!-- Content based recommendations settings (post a document to the endpoint in a POST request). The stream.body and stream.head are form parameters -->
-            
+            <!-- Content based recommendations settings (post a document to the endpoint in a POST request). The stream.body and stream.head are form parameters
+                             You can send them in a GET request, but a POST handles larger data. If you have really large documents, you will need to change the buffer settings
+                             so that the request doesn't blow the buffer limits in Solr or your web server.
+            -->
+                                                
             <!-- Fields used for processing documents posted to the stream.body and stream.head parameters in a POST call -->
             <str  name="stream.head.fl">title,title_syn</str>
             <str  name="stream.body.fl">extractSkills,extractTitles</str>
