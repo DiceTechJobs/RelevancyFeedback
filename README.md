@@ -177,7 +177,7 @@ An **example request handler configuration** for the solrconfig.xml is shown bel
 # Unsupervised Feedback (Blind Feedback) Plugin
 An example request handler configuration for the solrconfig.xml is shown below, with comments outlining the main parameters:
 ```$xml
- <requestHandler name="/ufselect" class="org.dice.solrenhancements.unsupervisedfeedback.DiceUnsupervisedFeedbackHandler">
+ <requestHandler name="/ufselect" class="org.dice.solrenhancements.unsupervisedfeedback.UnsupervisedFeedbackHandler">
         <lst name="defaults">
             <str name="omitHeader">true</str>
             <str name="wt">json</str>

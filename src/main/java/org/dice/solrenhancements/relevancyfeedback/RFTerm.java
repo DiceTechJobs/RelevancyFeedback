@@ -9,7 +9,7 @@ import java.util.Comparator;
 /**
  * Created by simon.hughes on 9/4/14.
  */
-public class MLTTerm implements Comparable<MLTTerm> {
+public class RFTerm implements Comparable<RFTerm> {
 
     private final String word;
     private final String fieldName;
@@ -28,12 +28,12 @@ public class MLTTerm implements Comparable<MLTTerm> {
     private float vectorLength = 1.0f;
 
     // non-payload
-    public MLTTerm(String word, String fieldName, float tf, float idf, int docFreq, boolean logTf, float fieldBoost, boolean useBoost){
+    public RFTerm(String word, String fieldName, float tf, float idf, int docFreq, boolean logTf, float fieldBoost, boolean useBoost){
         this(word, fieldName, tf, idf, docFreq, logTf, fieldBoost, 1.0f, useBoost, false);
     }
 
     // with payload
-    public MLTTerm(String word, String fieldName, float tf, float idf, int docFreq, boolean logTf, float fieldBoost, float payload, boolean useBoost, boolean hasPayload){
+    public RFTerm(String word, String fieldName, float tf, float idf, int docFreq, boolean logTf, float fieldBoost, float payload, boolean useBoost, boolean hasPayload){
 
         this.word = word;
         this.fieldName = fieldName;
@@ -135,9 +135,9 @@ public class MLTTerm implements Comparable<MLTTerm> {
         return sb.toString();
     }
 
-    public static Comparator<MLTTerm> FLD_BOOST_X_SCORE_ORDER = new Comparator<MLTTerm>() {
+    public static Comparator<RFTerm> FLD_BOOST_X_SCORE_ORDER = new Comparator<RFTerm>() {
         @Override
-        public int compare(MLTTerm t1, MLTTerm t2) {
+        public int compare(RFTerm t1, RFTerm t2) {
             float d = t2.getFinalScore() - t1.getFinalScore();
             if( d == 0 ) {
                 return 0;
@@ -146,7 +146,7 @@ public class MLTTerm implements Comparable<MLTTerm> {
         }
     };
 
-    public int compareTo(MLTTerm o) {
+    public int compareTo(RFTerm o) {
         return ((Float)o.getFinalScore()).compareTo(this.getFinalScore());
     }
 

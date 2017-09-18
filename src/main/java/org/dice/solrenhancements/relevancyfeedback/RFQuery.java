@@ -12,15 +12,15 @@ import java.util.List;
 /**
  * Created by simon.hughes on 11/25/14.
  */
-public class MLTQuery {
+public class RFQuery {
 
-    private final List<MLTTerm> mltTerms;
+    private final List<RFTerm> RFTerms;
     private final String mm;
     private BooleanQuery mustMatchQuery = null;
     private BooleanQuery mustNOTMatchQuery = null;
 
-    public MLTQuery(List<MLTTerm> mltTerms, String mm){
-        this.mltTerms = mltTerms == null? new ArrayList<MLTTerm>() : mltTerms;
+    public RFQuery(List<RFTerm> RFTerms, String mm){
+        this.RFTerms = RFTerms == null? new ArrayList<RFTerm>() : RFTerms;
         this.mm = mm;
     }
     public BooleanQuery getMustMatchQuery(){
@@ -39,30 +39,30 @@ public class MLTQuery {
         this.mustNOTMatchQuery = query;
     }
 
-    public List<MLTTerm> getMltTerms(){
-        return mltTerms;
+    public List<RFTerm> getRFTerms(){
+        return RFTerms;
     }
 
     public Query getOrQuery(){
         BooleanQuery.Builder qryBuilder = new BooleanQuery.Builder();
-        for(MLTTerm mltTerm: this.mltTerms){
-            qryBuilder.add(toBoostedQuery(mltTerm), BooleanClause.Occur.SHOULD);
+        for(RFTerm RFTerm : this.RFTerms){
+            qryBuilder.add(toBoostedQuery(RFTerm), BooleanClause.Occur.SHOULD);
         }
         SolrPluginUtils.setMinShouldMatch(qryBuilder, mm);
         return qryBuilder.build();
     }
 
-    private Query toBoostedQuery(MLTTerm mltTerm){
-        Query tq = toTermQuery(mltTerm);
-        return new BoostQuery(tq, mltTerm.getFinalScore());
+    private Query toBoostedQuery(RFTerm RFTerm){
+        Query tq = toTermQuery(RFTerm);
+        return new BoostQuery(tq, RFTerm.getFinalScore());
     }
 
-    private Query toTermQuery(MLTTerm mltTerm) {
-        if(mltTerm.hasPayload()) {
-            return new PayloadScoreQuery(new SpanTermQuery(mltTerm.getTerm()), new AveragePayloadFunction(), false);
+    private Query toTermQuery(RFTerm RFTerm) {
+        if(RFTerm.hasPayload()) {
+            return new PayloadScoreQuery(new SpanTermQuery(RFTerm.getTerm()), new AveragePayloadFunction(), false);
         }
         else{
-            return new TermQuery(mltTerm.getTerm());
+            return new TermQuery(RFTerm.getTerm());
         }
     }
 }

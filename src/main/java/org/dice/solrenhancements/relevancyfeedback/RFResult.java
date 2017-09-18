@@ -8,13 +8,13 @@ import java.util.List;
 /**
  * Created by simon.hughes on 1/6/17.
  */
-public class MLTResult {
-    private final List<MLTTerm> mltTerms;
+public class RFResult {
+    private final List<RFTerm> RFTerms;
     private final Query finalMltQuery;
     private DocListAndSet results;
 
-    public MLTResult(List<MLTTerm> mltTerms, Query finalMltQuery, DocListAndSet results){
-        this.mltTerms = mltTerms;
+    public RFResult(List<RFTerm> RFTerms, Query finalMltQuery, DocListAndSet results){
+        this.RFTerms = RFTerms;
         this.finalMltQuery = finalMltQuery;
         this.results = results;
     }
@@ -23,8 +23,8 @@ public class MLTResult {
         return results;
     }
 
-    public List<MLTTerm> getMltTerms(){
-        return mltTerms;
+    public List<RFTerm> getRFTerms(){
+        return RFTerms;
     }
 
     public Query getQuery() {

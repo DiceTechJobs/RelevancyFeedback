@@ -32,8 +32,8 @@ import org.apache.solr.search.*;
 import org.apache.solr.util.SolrPluginUtils;
 import org.dice.solrenhancements.JarVersion;
 import org.dice.solrenhancements.relevancyfeedback.InterestingTerm;
-import org.dice.solrenhancements.relevancyfeedback.MLTResult;
-import org.dice.solrenhancements.relevancyfeedback.MLTTerm;
+import org.dice.solrenhancements.relevancyfeedback.RFResult;
+import org.dice.solrenhancements.relevancyfeedback.RFTerm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,7 +53,7 @@ import java.util.List;
  *
  * @since solr 1.3
  */
-public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
+public class UnsupervisedFeedbackHandler extends RequestHandlerBase
 {
     private final static String EDISMAX = ExtendedDismaxQParserPlugin.NAME;
 
@@ -90,7 +90,7 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
         QParser parser = null;
 
         List<Query> targetFqFilters = null;
-        List<Query> mltFqFilters    = null;
+        List<Query> ufFqFilters    = null;
 
         try {
 
@@ -99,7 +99,7 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
             sortSpec = parser.getSort(true);
 
             targetFqFilters = getFilters(req, CommonParams.FQ);
-            mltFqFilters    = getFilters(req, UnsupervisedFeedbackParams.FQ);
+            ufFqFilters    = getFilters(req, UnsupervisedFeedbackParams.FQ);
         } catch (SyntaxError e) {
             throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, e);
         }
@@ -110,9 +110,9 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
         UnsupervisedFeedbackParams.TermStyle termStyle = UnsupervisedFeedbackParams.TermStyle.get(params.get(UnsupervisedFeedbackParams.INTERESTING_TERMS));
         List<InterestingTerm> interesting =
                 (termStyle == UnsupervisedFeedbackParams.TermStyle.NONE )?
-                        null : new ArrayList<InterestingTerm>( usfdbkHelper.moreLikeThis.getMaxQueryTermsPerField() );
+                        null : new ArrayList<InterestingTerm>( usfdbkHelper.relevancyFeedback.getMaxQueryTermsPerField() );
 
-        MLTResult usfdbkResult = null;
+        RFResult usfdbkResult = null;
 
         // Parse Required Params
         // This will either have a single Reader or valid query
@@ -130,7 +130,7 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
             } else {
 
                 usfdbkResult = expandQueryAndReExecute(rsp, params, maxDocumentsToMatch, flags, q, query, sortSpec,
-                        targetFqFilters, mltFqFilters, searcher, usfdbkHelper, start, rows);
+                        targetFqFilters, ufFqFilters, searcher, usfdbkHelper, start, rows);
             }
 
         } finally {
@@ -154,7 +154,7 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
             addFacet(req, rsp, params, results);
         }
 
-        addDebugInfo(req, rsp, q, mltFqFilters, usfdbkResult);
+        addDebugInfo(req, rsp, q, ufFqFilters, usfdbkResult);
     }
 
     private void configureSolrParameters(SolrQueryRequest req, ModifiableSolrParams params, String uniqueKeyField){
@@ -171,13 +171,13 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
         req.setParams(params);
     }
 
-    private void addInterestingTerms(SolrQueryResponse rsp, UnsupervisedFeedbackParams.TermStyle termStyle, MLTResult mltResult) {
+    private void addInterestingTerms(SolrQueryResponse rsp, UnsupervisedFeedbackParams.TermStyle termStyle, RFResult RFResult) {
 
-        List<MLTTerm> mltTerms = mltResult.getMltTerms();
-        Collections.sort(mltTerms, MLTTerm.FLD_BOOST_X_SCORE_ORDER);
+        List<RFTerm> RFTerms = RFResult.getRFTerms();
+        Collections.sort(RFTerms, RFTerm.FLD_BOOST_X_SCORE_ORDER);
 
         if( termStyle == UnsupervisedFeedbackParams.TermStyle.DETAILS ) {
-            List<InterestingTerm> interesting = extractInterestingTerms(mltResult.getMltTerms());
+            List<InterestingTerm> interesting = extractInterestingTerms(RFResult.getRFTerms());
 
             int longest = 0;
             for( InterestingTerm t : interesting ) {
@@ -191,17 +191,17 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
             rsp.add( "interestingTerms", it );
         }
         else {
-            List<String> it = new ArrayList<String>( mltTerms.size() );
-            for( MLTTerm mltTerm : mltTerms) {
-                it.add(mltTerm.getWord());
+            List<String> it = new ArrayList<String>( RFTerms.size() );
+            for( RFTerm RFTerm : RFTerms) {
+                it.add(RFTerm.getWord());
             }
             rsp.add( "interestingTerms", it );
         }
     }
 
-    private List<InterestingTerm> extractInterestingTerms(List<MLTTerm> mltTerms){
+    private List<InterestingTerm> extractInterestingTerms(List<RFTerm> RFTerms){
         List<InterestingTerm> terms = new ArrayList<InterestingTerm>();
-        for( MLTTerm term : mltTerms) {
+        for( RFTerm term : RFTerms) {
             InterestingTerm it = new InterestingTerm();
             it.term = term.getTerm();
             it.boost = term.getFinalScore();
@@ -211,7 +211,7 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
         return terms;
     }
 
-    private MLTResult expandQueryAndReExecute(SolrQueryResponse rsp, SolrParams params, int maxDocumentsToMatch, int flags, String q, Query seedQuery, SortSpec sortSpec, List<Query> targetFqFilters, List<Query> mltFqFilters, SolrIndexSearcher searcher, UnsupervisedFeedbackHelper uff, int start, int rows) throws IOException, SyntaxError {
+    private RFResult expandQueryAndReExecute(SolrQueryResponse rsp, SolrParams params, int maxDocumentsToMatch, int flags, String q, Query seedQuery, SortSpec sortSpec, List<Query> targetFqFilters, List<Query> rfFqFilters, SolrIndexSearcher searcher, UnsupervisedFeedbackHelper uff, int start, int rows) throws IOException, SyntaxError {
 
         boolean includeMatch = params.getBool(UnsupervisedFeedbackParams.MATCH_INCLUDE, true);
         int matchOffset = params.getInt(UnsupervisedFeedbackParams.MATCH_OFFSET, 0);
@@ -228,26 +228,26 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
 
         // This is an iterator, but we only handle the first match
         DocIterator iterator = match.iterator();
-        MLTResult mltResult = null;
+        RFResult RFResult = null;
         if (iterator.hasNext()) {
             // do a RelevancyFeedback query for each document in results
-            mltResult = uff.expandQueryAndReExecute(iterator, seedQuery, start, rows, mltFqFilters, flags, sortSpec.getSort());
+            RFResult = uff.expandQueryAndReExecute(iterator, seedQuery, start, rows, rfFqFilters, flags, sortSpec.getSort());
         }
-        return mltResult;
+        return RFResult;
     }
 
-    private void addFacet(SolrQueryRequest req, SolrQueryResponse rsp, SolrParams params, DocListAndSet mltDocs) {
-        if( mltDocs.docSet == null ) {
+    private void addFacet(SolrQueryRequest req, SolrQueryResponse rsp, SolrParams params, DocListAndSet rfDocs) {
+        if( rfDocs.docSet == null ) {
             rsp.add( "facet_counts", null );
         }
         else {
             FacetComponent fct = new FacetComponent();
-            rsp.add( "facet_counts", fct.getFacetCounts(new SimpleFacets(req, mltDocs.docSet, params )) );
+            rsp.add( "facet_counts", fct.getFacetCounts(new SimpleFacets(req, rfDocs.docSet, params )) );
         }
     }
 
-    private void addDebugInfo(SolrQueryRequest req, SolrQueryResponse rsp, String q, List<Query> mltFqFilters, MLTResult mltResult) {
-        DocListAndSet mltDocs = mltResult.getResults();
+    private void addDebugInfo(SolrQueryRequest req, SolrQueryResponse rsp, String q, List<Query> rfFqFilters, RFResult RFResult) {
+        DocListAndSet mltDocs = RFResult.getResults();
 
         boolean dbg = req.getParams().getBool(CommonParams.DEBUG_QUERY, false);
         boolean dbgQuery = false, dbgResults = false;
@@ -269,22 +269,22 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
         // Copied from StandardRequestHandler... perhaps it should be added to doStandardDebug?
         if (dbg == true) {
             try {
-                NamedList<String> it = getMltTermsForDebug(mltResult.getMltTerms());
+                NamedList<String> it = getRFTermsForDebug(RFResult.getRFTerms());
 
                 NamedList<Object> dbgInfo = new NamedList<Object>();
-                NamedList<Object> stdDbg = SolrPluginUtils.doStandardDebug(req, q, mltResult.getQuery(), mltDocs.docList, dbgQuery, dbgResults);
+                NamedList<Object> stdDbg = SolrPluginUtils.doStandardDebug(req, q, RFResult.getQuery(), mltDocs.docList, dbgQuery, dbgResults);
                 if (null != dbgInfo) {
                     rsp.add("debug", dbgInfo);
-                    dbgInfo.add( "mltTerms", it );
+                    dbgInfo.add( "ufTerms", it );
                     dbgInfo.addAll(stdDbg);
 
-                    if (null != mltFqFilters) {
+                    if (null != rfFqFilters) {
                         dbgInfo.add("filter_queries",req.getParams().getParams(CommonParams.FQ));
-                        List<String> fqs = new ArrayList<String>(mltFqFilters.size());
-                        for (Query fq : mltFqFilters) {
+                        List<String> fqs = new ArrayList<String>(rfFqFilters.size());
+                        for (Query fq : rfFqFilters) {
                             fqs.add(QueryParsing.toString(fq, req.getSchema()));
                         }
-                        dbgInfo.add("mlt_filter_queries",fqs);
+                        dbgInfo.add("uf_filter_queries",fqs);
                     }
                 }
             } catch (Exception e) {
@@ -294,19 +294,19 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
         }
     }
 
-    private NamedList<String> getMltTermsForDebug(List<MLTTerm> mltTerms) {
-        Collections.sort(mltTerms);
+    private NamedList<String> getRFTermsForDebug(List<RFTerm> RFTerms) {
+        Collections.sort(RFTerms);
         NamedList<String> it = new NamedList<String>();
         int longestWd = 0;
         int longestFieldName = 0;
-        for( MLTTerm mltTerm : mltTerms) {
-            longestWd = Math.max(mltTerm.getWord().length(), longestWd);
-            longestFieldName = Math.max(mltTerm.getFieldName().length(), longestFieldName);
+        for( RFTerm RFTerm : RFTerms) {
+            longestWd = Math.max(RFTerm.getWord().length(), longestWd);
+            longestFieldName = Math.max(RFTerm.getFieldName().length(), longestFieldName);
         }
-        for( MLTTerm mltTerm : mltTerms) {
-            String paddedfieldName = Strings.padEnd(mltTerm.getFieldName(), longestFieldName, ' ');
-            String paddedWd = Strings.padEnd(mltTerm.getWord(), longestWd, ' ');
-            it.add(paddedfieldName, paddedWd + " - " + mltTerm.valuesToString() );
+        for( RFTerm RFTerm : RFTerms) {
+            String paddedfieldName = Strings.padEnd(RFTerm.getFieldName(), longestFieldName, ' ');
+            String paddedWd = Strings.padEnd(RFTerm.getWord(), longestWd, ' ');
+            it.add(paddedfieldName, paddedWd + " - " + RFTerm.valuesToString() );
         }
         return it;
     }

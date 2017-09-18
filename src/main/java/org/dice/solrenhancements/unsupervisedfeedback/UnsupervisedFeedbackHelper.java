@@ -16,8 +16,8 @@ import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.*;
 import org.apache.solr.util.SolrPluginUtils;
-import org.dice.solrenhancements.relevancyfeedback.MLTQuery;
-import org.dice.solrenhancements.relevancyfeedback.MLTResult;
+import org.dice.solrenhancements.relevancyfeedback.RFQuery;
+import org.dice.solrenhancements.relevancyfeedback.RFResult;
 import org.dice.solrenhancements.relevancyfeedback.RelevancyFeedback;
 
 import java.io.IOException;
@@ -35,7 +35,7 @@ public class UnsupervisedFeedbackHelper
 
     final SolrIndexSearcher searcher;
     final QParser qParser;
-    final RelevancyFeedback moreLikeThis;
+    final RelevancyFeedback relevancyFeedback;
     final IndexReader reader;
     final SchemaField uniqueKeyField;
     final boolean needDocSet;
@@ -55,43 +55,43 @@ public class UnsupervisedFeedbackHelper
                     "RelevancyFeedback requires at least one similarity field: "+ UnsupervisedFeedbackParams.SIMILARITY_FIELDS );
         }
 
-        //this.moreLikeThis = new RelevancyFeedback()
-        this.moreLikeThis = new RelevancyFeedback( reader ); // TODO -- after LUCENE-896, we can use , searcher.getSimilarity() );
-        moreLikeThis.setFieldNames(fields);
+        //this.relevancyFeedback = new RelevancyFeedback()
+        this.relevancyFeedback = new RelevancyFeedback( reader ); // TODO -- after LUCENE-896, we can use , searcher.getSimilarity() );
+        relevancyFeedback.setFieldNames(fields);
 
         final String sPayloadFieldList = params.get(UnsupervisedFeedbackParams.PAYLOAD_FIELDS);
         if(sPayloadFieldList != null && sPayloadFieldList.trim().length() > 0) {
             String[] payloadFields = splitList.split(sPayloadFieldList);
-            moreLikeThis.setPayloadFields(payloadFields);
+            relevancyFeedback.setPayloadFields(payloadFields);
         }
-        moreLikeThis.setAnalyzer(searcher.getSchema().getIndexAnalyzer());
+        relevancyFeedback.setAnalyzer(searcher.getSchema().getIndexAnalyzer());
 
         // configurable params
 
-        moreLikeThis.setMinTermFreq(params.getInt(UnsupervisedFeedbackParams.MIN_TERM_FREQ, RelevancyFeedback.DEFAULT_MIN_TERM_FREQ));
-        moreLikeThis.setMinDocFreq(params.getInt(UnsupervisedFeedbackParams.MIN_DOC_FREQ, RelevancyFeedback.DEFAULT_MIN_DOC_FREQ));
-        moreLikeThis.setMaxDocFreq(params.getInt(UnsupervisedFeedbackParams.MAX_DOC_FREQ, RelevancyFeedback.DEFAULT_MAX_DOC_FREQ));
-        moreLikeThis.setMinWordLen(params.getInt(UnsupervisedFeedbackParams.MIN_WORD_LEN, RelevancyFeedback.DEFAULT_MIN_WORD_LENGTH));
-        moreLikeThis.setMaxWordLen(params.getInt(UnsupervisedFeedbackParams.MAX_WORD_LEN, RelevancyFeedback.DEFAULT_MAX_WORD_LENGTH));
+        relevancyFeedback.setMinTermFreq(params.getInt(UnsupervisedFeedbackParams.MIN_TERM_FREQ, RelevancyFeedback.DEFAULT_MIN_TERM_FREQ));
+        relevancyFeedback.setMinDocFreq(params.getInt(UnsupervisedFeedbackParams.MIN_DOC_FREQ, RelevancyFeedback.DEFAULT_MIN_DOC_FREQ));
+        relevancyFeedback.setMaxDocFreq(params.getInt(UnsupervisedFeedbackParams.MAX_DOC_FREQ, RelevancyFeedback.DEFAULT_MAX_DOC_FREQ));
+        relevancyFeedback.setMinWordLen(params.getInt(UnsupervisedFeedbackParams.MIN_WORD_LEN, RelevancyFeedback.DEFAULT_MIN_WORD_LENGTH));
+        relevancyFeedback.setMaxWordLen(params.getInt(UnsupervisedFeedbackParams.MAX_WORD_LEN, RelevancyFeedback.DEFAULT_MAX_WORD_LENGTH));
 
         // new parameters
-        moreLikeThis.setBoostFn(params.get(UnsupervisedFeedbackParams.BOOST_FN));
-        moreLikeThis.setNormalizeFieldBoosts(params.getBool(UnsupervisedFeedbackParams.NORMALIZE_FIELD_BOOSTS, RelevancyFeedback.DEFAULT_NORMALIZE_FIELD_BOOSTS));
+        relevancyFeedback.setBoostFn(params.get(UnsupervisedFeedbackParams.BOOST_FN));
+        relevancyFeedback.setNormalizeFieldBoosts(params.getBool(UnsupervisedFeedbackParams.NORMALIZE_FIELD_BOOSTS, RelevancyFeedback.DEFAULT_NORMALIZE_FIELD_BOOSTS));
         // new versions of previous parameters moved to the field level
-        moreLikeThis.setMaxQueryTermsPerField(params.getInt(UnsupervisedFeedbackParams.MAX_QUERY_TERMS_PER_FIELD, RelevancyFeedback.DEFAULT_MAX_QUERY_TERMS_PER_FIELD));
-        moreLikeThis.setMaxNumTokensParsedPerField(params.getInt(UnsupervisedFeedbackParams.MAX_NUM_TOKENS_PARSED_PER_FIELD, RelevancyFeedback.DEFAULT_MAX_NUM_TOKENS_PARSED_PER_FIELD));
-        moreLikeThis.setLogTf(params.getBool(UnsupervisedFeedbackParams.IS_LOG_TF, RelevancyFeedback.DEFAULT_IS_LOG_TF));
+        relevancyFeedback.setMaxQueryTermsPerField(params.getInt(UnsupervisedFeedbackParams.MAX_QUERY_TERMS_PER_FIELD, RelevancyFeedback.DEFAULT_MAX_QUERY_TERMS_PER_FIELD));
+        relevancyFeedback.setMaxNumTokensParsedPerField(params.getInt(UnsupervisedFeedbackParams.MAX_NUM_TOKENS_PARSED_PER_FIELD, RelevancyFeedback.DEFAULT_MAX_NUM_TOKENS_PARSED_PER_FIELD));
+        relevancyFeedback.setLogTf(params.getBool(UnsupervisedFeedbackParams.IS_LOG_TF, RelevancyFeedback.DEFAULT_IS_LOG_TF));
 
-        moreLikeThis.setBoostFields(SolrPluginUtils.parseFieldBoosts(params.getParams(UnsupervisedFeedbackParams.QF)));
+        relevancyFeedback.setBoostFields(SolrPluginUtils.parseFieldBoosts(params.getParams(UnsupervisedFeedbackParams.QF)));
     }
 
     private Query getBoostedFunctionQuery(Query q) throws SyntaxError{
 
-        if (moreLikeThis.getBoostFn() == null || moreLikeThis.getBoostFn().trim().length() == 0) {
+        if (relevancyFeedback.getBoostFn() == null || relevancyFeedback.getBoostFn().trim().length() == 0) {
             return q;
         }
 
-        Query boost = this.qParser.subQuery(moreLikeThis.getBoostFn(), FunctionQParserPlugin.NAME).getQuery();
+        Query boost = this.qParser.subQuery(relevancyFeedback.getBoostFn(), FunctionQParserPlugin.NAME).getQuery();
         ValueSource vs;
         if (boost instanceof FunctionQuery) {
             vs = ((FunctionQuery) boost).getValueSource();
@@ -101,7 +101,7 @@ public class UnsupervisedFeedbackHelper
         return new BoostedQuery(q, vs);
     }
 
-    public MLTResult expandQueryAndReExecute(DocIterator iterator, Query seedQuery, int start, int rows, List<Query> filters, int flags, Sort lsort) throws IOException, SyntaxError
+    public RFResult expandQueryAndReExecute(DocIterator iterator, Query seedQuery, int start, int rows, List<Query> filters, int flags, Sort lsort) throws IOException, SyntaxError
     {
         List<Integer> ids = new ArrayList<Integer>();
         while(iterator.hasNext()) {
@@ -115,8 +115,8 @@ public class UnsupervisedFeedbackHelper
 
         // expand original query from matched documents, and add as a should query for re-ranking purposes
 
-        MLTQuery mltQuery = moreLikeThis.like(ids);
-        Query expansionQuery  = mltQuery.getOrQuery();
+        RFQuery RFQuery = relevancyFeedback.like(ids);
+        Query expansionQuery  = RFQuery.getOrQuery();
 
         rawUFQuery.add(expansionQuery, BooleanClause.Occur.SHOULD);
 
@@ -130,7 +130,7 @@ public class UnsupervisedFeedbackHelper
             results.docList = searcher.getDocList(finalUfQuery, filters, lsort, start, rows, flags);
         }
 
-        return new MLTResult(mltQuery.getMltTerms(), finalUfQuery, results);
+        return new RFResult(RFQuery.getRFTerms(), finalUfQuery, results);
     }
 }
 

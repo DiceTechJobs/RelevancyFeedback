@@ -28,7 +28,7 @@ import java.util.regex.Pattern;
 /**
  * Helper class for RelevancyFeedback that can be called from other request handlers
  */
-public class MoreLikeThisHelper
+public class RFHelper
 {
     // Pattern is thread safe -- TODO? share this with general 'fl' param
     private static final Pattern splitList = Pattern.compile(",| ");
@@ -41,7 +41,7 @@ public class MoreLikeThisHelper
     final boolean needDocSet;
 
 
-    public MoreLikeThisHelper( SolrParams params, SolrIndexSearcher searcher, SchemaField uniqueKeyField, QParser qParser )
+    public RFHelper(SolrParams params, SolrIndexSearcher searcher, SchemaField uniqueKeyField, QParser qParser )
     {
         this.searcher = searcher;
         this.qParser = qParser;
@@ -144,7 +144,7 @@ public class MoreLikeThisHelper
         return new BoostedQuery(q, vs);
     }
 
-    public MLTResult getMoreLikeTheseFromDocs(DocIterator iterator, int start, int rows, List<Query> filters, int flags, Sort lsort) throws IOException, SyntaxError
+    public RFResult getMoreLikeTheseFromDocs(DocIterator iterator, int start, int rows, List<Query> filters, int flags, Sort lsort) throws IOException, SyntaxError
     {
         BooleanQuery.Builder qryBuilder = new BooleanQuery.Builder();
         List<Integer> ids = new ArrayList<Integer>();
@@ -159,15 +159,15 @@ public class MoreLikeThisHelper
             qryBuilder.add(tq, BooleanClause.Occur.MUST_NOT);
         }
 
-        MLTQuery mltQuery = mlt.like(ids);
+        RFQuery RFQuery = mlt.like(ids);
 
-        Query rawMLTQuery = mltQuery.getOrQuery();
+        Query rawMLTQuery = RFQuery.getOrQuery();
 
-        if(mltQuery.getMustMatchQuery() != null){
-            filters.add(mltQuery.getMustMatchQuery());
+        if(RFQuery.getMustMatchQuery() != null){
+            filters.add(RFQuery.getMustMatchQuery());
         }
-        if(mltQuery.getMustNOTMatchQuery() != null){
-            filters.add(mltQuery.getMustNOTMatchQuery());
+        if(RFQuery.getMustNOTMatchQuery() != null){
+            filters.add(RFQuery.getMustNOTMatchQuery());
         }
 
         Query boostedMLTQuery = getBoostedFunctionQuery(rawMLTQuery);
@@ -181,16 +181,16 @@ public class MoreLikeThisHelper
             results.docList = searcher.getDocList(finalMLTQuery, filters, lsort, start, rows, flags);
         }
 
-        return new MLTResult(mltQuery.getMltTerms(), finalMLTQuery, results);
+        return new RFResult(RFQuery.getRFTerms(), finalMLTQuery, results);
     }
 
 
-    public MLTResult getMoreLikeThisFromContentSteam(Reader reader, int start, int rows, List<Query> filters, int flags, Sort lsort) throws IOException, SyntaxError
+    public RFResult getMoreLikeThisFromContentSteam(Reader reader, int start, int rows, List<Query> filters, int flags, Sort lsort) throws IOException, SyntaxError
     {
-        MLTQuery mltQuery = mlt.like(reader);
-        Query rawMLTQuery = mltQuery.getOrQuery();
+        RFQuery RFQuery = mlt.like(reader);
+        Query rawMLTQuery = RFQuery.getOrQuery();
 
-        if(mltQuery.getMustMatchQuery() != null || mltQuery.getMustNOTMatchQuery() != null){
+        if(RFQuery.getMustMatchQuery() != null || RFQuery.getMustNOTMatchQuery() != null){
             throw new RuntimeException(
                     String.format("The %s and the %s parameters are not supported for content stream queries",
                     RFParams.FL_MUST_MATCH, RFParams.FL_MUST_NOT_MATCH));
@@ -203,7 +203,7 @@ public class MoreLikeThisHelper
         } else {
             results.docList = searcher.getDocList( boostedMLTQuery, filters, lsort, start, rows, flags);
         }
-        return new MLTResult(mltQuery.getMltTerms(), boostedMLTQuery, results);
+        return new RFResult(RFQuery.getRFTerms(), boostedMLTQuery, results);
     }
 
     public RelevancyFeedback getMoreLikeThis()

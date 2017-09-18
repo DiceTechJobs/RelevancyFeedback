@@ -857,7 +857,7 @@ public final class RelevancyFeedback {
      * @param docNums the documentIDs of the lucene docs to generate the 'More Like This" query for.
      * @return a query that will return docs queryFromDocuments the passed lucene document ID.
      */
-    public MLTQuery like(List<Integer> docNums) throws IOException {
+    public RFQuery like(List<Integer> docNums) throws IOException {
 
         Map<String,Map<String, Flt>> fieldTermFreq = new HashMap<String, Map<String, Flt>>();
         Map<String,Map<String, Flt>> mustMatchTerms = new HashMap<String, Map<String, Flt>>();
@@ -869,7 +869,7 @@ public final class RelevancyFeedback {
             retrieveTerms(docNum, getDifferentFieldNames(), mustNOTMatchTerms);
         }
 
-        MLTQuery mltResult = buildQueryFromFieldTermFrequencies(fieldTermFreq, false);
+        RFQuery mltResult = buildQueryFromFieldTermFrequencies(fieldTermFreq, false);
         if(mustMatchTerms.size() > 0){
             mltResult.setMustMatchQuery(buildMustMatchQuery(mustMatchTerms, true));
         }
@@ -887,7 +887,7 @@ public final class RelevancyFeedback {
      * @param reader a stream reader for the document stream (from the stream.body parameter)*
      * @return a query that will return docs queryFromDocuments the passed Reader.
      */
-    public MLTQuery like(String[] fields, Reader reader) throws IOException {
+    public RFQuery like(String[] fields, Reader reader) throws IOException {
 
         return like(null, fields, reader);
     }
@@ -898,12 +898,12 @@ public final class RelevancyFeedback {
      * @param reader a stream reader for the document stream (from the stream.body parameter)
      * @return a query that will return docs queryFromDocuments the passed Reader.
      */
-    public MLTQuery like(Reader reader) throws IOException {
+    public RFQuery like(Reader reader) throws IOException {
 
         return like(getStreamHeadfieldNames(), getStreamBodyfieldNames(), reader);
     }
 
-    private MLTQuery like(String[] streamHeadfields, String[] streamBodyfields, Reader reader) throws IOException {
+    private RFQuery like(String[] streamHeadfields, String[] streamBodyfields, Reader reader) throws IOException {
 
         if(streamBodyfields == null){
             throw new UnsupportedOperationException(
@@ -941,33 +941,33 @@ public final class RelevancyFeedback {
         return buildQueryFromFieldTermFrequencies(fieldTermFreq, true);
     }
 
-    private MLTQuery buildQueryFromFieldTermFrequencies(Map<String, Map<String, Flt>> fieldTermFreq, boolean contentStreamQuery) throws IOException {
+    private RFQuery buildQueryFromFieldTermFrequencies(Map<String, Map<String, Flt>> fieldTermFreq, boolean contentStreamQuery) throws IOException {
 
-        List<MLTTerm> interestingTerms = new ArrayList<MLTTerm>();
+        List<RFTerm> interestingTerms = new ArrayList<RFTerm>();
         for(String fieldName: fieldTermFreq.keySet()){
             Map<String,Flt> words = fieldTermFreq.get(fieldName);
-            PriorityQueue<MLTTerm> queue = createQueue(fieldName, words, contentStreamQuery);
+            PriorityQueue<RFTerm> queue = createQueue(fieldName, words, contentStreamQuery);
             interestingTerms.addAll(getMostInterestingTerms(queue));
         }
 
-        MLTQuery mltResult = new MLTQuery(interestingTerms, getMm());
+        RFQuery mltResult = new RFQuery(interestingTerms, getMm());
         return mltResult;
     }
 
     /**
      * Compute the top most interesting terms from the priority queue of all MLT Terms
      */
-    private List<MLTTerm> getMostInterestingTerms(PriorityQueue<MLTTerm> q) {
+    private List<RFTerm> getMostInterestingTerms(PriorityQueue<RFTerm> q) {
 
         int maxTerms = (maxQueryTermsPerField <= 0) ? Integer.MAX_VALUE : maxQueryTermsPerField;
         double sumQuaredBoost = 0.0f;
 
-        List<MLTTerm> interestingTerms = new ArrayList<MLTTerm>();
-        MLTTerm currentTerm = null;
+        List<RFTerm> interestingTerms = new ArrayList<RFTerm>();
+        RFTerm currentTerm = null;
         while ((currentTerm = q.pop()) != null
                 && interestingTerms.size() < maxTerms) {
             // if not boost, then set score to 1.0 not tf.idf
-            // now implemented inside MLTTerm
+            // now implemented inside RFTerm
 
             // if not boost, boostValue == 1.0, so this just adds 1 as desired
             sumQuaredBoost += Math.pow(currentTerm.getTermWeight(),2);
@@ -976,11 +976,11 @@ public final class RelevancyFeedback {
 
         float vectorLength = (float) Math.sqrt(sumQuaredBoost);
         if(vectorLength <= 0.0){
-            return new ArrayList<MLTTerm>();
+            return new ArrayList<RFTerm>();
         }
 
         if(this.isNormalizeFieldBoosts()){
-            for(MLTTerm term: interestingTerms){
+            for(RFTerm term: interestingTerms){
                 term.setVectorLength(vectorLength);
             }
         }
@@ -992,7 +992,7 @@ public final class RelevancyFeedback {
      *
      * @param words a map of words keyed on the word(String) with Int objects as the values.
      */
-    private PriorityQueue<MLTTerm> createQueue(String fieldName, Map<String, Flt> words, boolean contentStreamQuery) throws IOException {
+    private PriorityQueue<RFTerm> createQueue(String fieldName, Map<String, Flt> words, boolean contentStreamQuery) throws IOException {
         // have collected all words in doc and their freqs
         int numDocs = ir.numDocs();
         FreqQ res = new FreqQ(words.size()); // will order words by score
@@ -1021,9 +1021,9 @@ public final class RelevancyFeedback {
 
             float idf = similarity.idf(docFreq, numDocs);
             final float fieldBoost = contentStreamQuery? this.getStreamFieldBoost(fieldName): this.getFieldBoost(fieldName);
-            final MLTTerm mltTerm;
+            final RFTerm RFTerm;
             if(isPayloadField(fieldName)){
-                mltTerm = new MLTTerm(
+                RFTerm = new RFTerm(
                         word,        // the word
                         fieldName,   // the field name
                         tf,          // tf
@@ -1037,7 +1037,7 @@ public final class RelevancyFeedback {
                 );
             }
             else{
-                mltTerm = new MLTTerm(
+                RFTerm = new RFTerm(
                         word,        // the word
                         fieldName,   // the field name
                         tf,          // tf
@@ -1048,7 +1048,7 @@ public final class RelevancyFeedback {
                         this.boost
                 );
             }
-            res.insertWithOverflow(mltTerm);
+            res.insertWithOverflow(RFTerm);
         }
         return res;
     }
@@ -1255,13 +1255,13 @@ public final class RelevancyFeedback {
     /**
      * PriorityQueue that orders words by score.
      */
-    private static class FreqQ extends PriorityQueue<MLTTerm> {
+    private static class FreqQ extends PriorityQueue<RFTerm> {
         FreqQ(int s) {
             super(s);
         }
 
         @Override
-        protected boolean lessThan(MLTTerm aa, MLTTerm bb) {
+        protected boolean lessThan(RFTerm aa, RFTerm bb) {
             return aa.getFinalScore() > bb.getFinalScore();
         }
     }
