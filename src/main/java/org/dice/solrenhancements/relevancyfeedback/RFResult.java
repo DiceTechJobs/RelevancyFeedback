@@ -10,12 +10,12 @@ import java.util.List;
  */
 public class RFResult {
     private final List<RFTerm> RFTerms;
-    private final Query finalMltQuery;
+    private final Query finalRfQuery;
     private DocListAndSet results;
 
-    public RFResult(List<RFTerm> RFTerms, Query finalMltQuery, DocListAndSet results){
+    public RFResult(List<RFTerm> RFTerms, Query finalRfQuery, DocListAndSet results){
         this.RFTerms = RFTerms;
-        this.finalMltQuery = finalMltQuery;
+        this.finalRfQuery = finalRfQuery;
         this.results = results;
     }
 
@@ -28,6 +28,6 @@ public class RFResult {
     }
 
     public Query getQuery() {
-        return finalMltQuery;
+        return finalRfQuery;
     }
 }

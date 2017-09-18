@@ -279,13 +279,13 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
         }
     }
 
-    private void addFacet(SolrQueryRequest req, SolrQueryResponse rsp, SolrParams params, DocListAndSet mltDocs) {
-        if( mltDocs.docSet == null ) {
+    private void addFacet(SolrQueryRequest req, SolrQueryResponse rsp, SolrParams params, DocListAndSet rfDocs) {
+        if( rfDocs.docSet == null ) {
             rsp.add( "facet_counts", null );
         }
         else {
             FacetComponent fct = new FacetComponent();
-            rsp.add( "facet_counts", fct.getFacetCounts(new SimpleFacets(req, mltDocs.docSet, params )) );
+            rsp.add( "facet_counts", fct.getFacetCounts(new SimpleFacets(req, rfDocs.docSet, params )) );
         }
     }
 

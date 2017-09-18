@@ -248,7 +248,7 @@ public final class RelevancyFeedback {
 
 
     /**
-     * mm setting for MLT query
+     * mm setting for RF query
      */
     private String mm = null;
 
@@ -338,7 +338,7 @@ public final class RelevancyFeedback {
 
 
     /**
-     * Gets the value of the relevancyFeedback.mm parameter (mm for the MLT query)
+     * Gets the value of the relevancyFeedback.mm parameter (mm for the RF query)
      *
      * @return - the minimum should match parameter string - follows the normal mm syntax
      * @see #setMm(String)
@@ -348,7 +348,7 @@ public final class RelevancyFeedback {
     }
 
     /**
-     * Sets the text for the relevancyFeedback.mm parameter (mm for the MLT query)
+     * Sets the text for the relevancyFeedback.mm parameter (mm for the RF query)
      *
      * @param mm - minimum should match parameter string - follows the normal mm syntax
      * @see #getMm()
@@ -366,7 +366,7 @@ public final class RelevancyFeedback {
     /**
      * Gets the text for the Multiplicative Boost Function
      *
-     * @return the multiplicative boostFunction used in the MLT query
+     * @return the multiplicative boostFunction used in the RF query
      * @see #setBoostFn(String)
      **/
     public String getBoostFn() {
@@ -609,7 +609,7 @@ public final class RelevancyFeedback {
     }
 
     /**
-     * Sets the field names that must match the target document in the MLT query
+     * Sets the field names that must match the target document in the RF query
      *
      * @param fieldNames the field names that will be used
      */
@@ -618,7 +618,7 @@ public final class RelevancyFeedback {
     }
 
     /**
-     * Sets the field names that must match the target document in the MLT query
+     * Sets the field names that must match the target document in the RF query
      *
      * @param fieldNames the field names that will be used
      */
@@ -869,27 +869,14 @@ public final class RelevancyFeedback {
             retrieveTerms(docNum, getDifferentFieldNames(), mustNOTMatchTerms);
         }
 
-        RFQuery mltResult = buildQueryFromFieldTermFrequencies(fieldTermFreq, false);
+        RFQuery rfResult = buildQueryFromFieldTermFrequencies(fieldTermFreq, false);
         if(mustMatchTerms.size() > 0){
-            mltResult.setMustMatchQuery(buildMustMatchQuery(mustMatchTerms, true));
+            rfResult.setMustMatchQuery(buildMustMatchQuery(mustMatchTerms, true));
         }
         if(mustNOTMatchTerms.size() > 0){
-            mltResult.setMustNOTMatchQuery(buildMustMatchQuery(mustNOTMatchTerms, false));
+            rfResult.setMustNOTMatchQuery(buildMustMatchQuery(mustNOTMatchTerms, false));
         }
-        return mltResult;
-    }
-
-    /**
-     * Return a query that will return docs queryFromDocuments the passed Reader.
-     * Used by MoreLikethisQuery.
-     *
-     * @param fields a list of fields to use to process the document stream
-     * @param reader a stream reader for the document stream (from the stream.body parameter)*
-     * @return a query that will return docs queryFromDocuments the passed Reader.
-     */
-    public RFQuery like(String[] fields, Reader reader) throws IOException {
-
-        return like(null, fields, reader);
+        return rfResult;
     }
 
     /**
@@ -950,12 +937,12 @@ public final class RelevancyFeedback {
             interestingTerms.addAll(getMostInterestingTerms(queue));
         }
 
-        RFQuery mltResult = new RFQuery(interestingTerms, getMm());
-        return mltResult;
+        RFQuery rfResult = new RFQuery(interestingTerms, getMm());
+        return rfResult;
     }
 
     /**
-     * Compute the top most interesting terms from the priority queue of all MLT Terms
+     * Compute the top most interesting terms from the priority queue of all RF Terms
      */
     private List<RFTerm> getMostInterestingTerms(PriorityQueue<RFTerm> q) {
 

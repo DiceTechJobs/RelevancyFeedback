@@ -161,7 +161,7 @@ public class RFHelper
 
         RFQuery RFQuery = relevancyFeedback.like(ids);
 
-        Query rawMLTQuery = RFQuery.getOrQuery();
+        Query rawrfQuery = RFQuery.getOrQuery();
 
         if(RFQuery.getMustMatchQuery() != null){
             filters.add(RFQuery.getMustMatchQuery());
@@ -170,8 +170,8 @@ public class RFHelper
             filters.add(RFQuery.getMustNOTMatchQuery());
         }
 
-        Query boostedMLTQuery = getBoostedFunctionQuery(rawMLTQuery);
-        qryBuilder.add(boostedMLTQuery, BooleanClause.Occur.MUST);
+        Query boostedrfQuery = getBoostedFunctionQuery(rawrfQuery);
+        qryBuilder.add(boostedrfQuery, BooleanClause.Occur.MUST);
 
         Query finalQuery = null;
 

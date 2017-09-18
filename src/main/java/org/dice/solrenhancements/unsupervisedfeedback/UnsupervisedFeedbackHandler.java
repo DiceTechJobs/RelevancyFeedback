@@ -247,7 +247,7 @@ public class UnsupervisedFeedbackHandler extends RequestHandlerBase
     }
 
     private void addDebugInfo(SolrQueryRequest req, SolrQueryResponse rsp, String q, List<Query> rfFqFilters, RFResult RFResult) {
-        DocListAndSet mltDocs = RFResult.getResults();
+        DocListAndSet rfDocs = RFResult.getResults();
 
         boolean dbg = req.getParams().getBool(CommonParams.DEBUG_QUERY, false);
         boolean dbgQuery = false, dbgResults = false;
@@ -272,7 +272,7 @@ public class UnsupervisedFeedbackHandler extends RequestHandlerBase
                 NamedList<String> it = getRFTermsForDebug(RFResult.getRFTerms());
 
                 NamedList<Object> dbgInfo = new NamedList<Object>();
-                NamedList<Object> stdDbg = SolrPluginUtils.doStandardDebug(req, q, RFResult.getQuery(), mltDocs.docList, dbgQuery, dbgResults);
+                NamedList<Object> stdDbg = SolrPluginUtils.doStandardDebug(req, q, RFResult.getQuery(), rfDocs.docList, dbgQuery, dbgResults);
                 if (null != dbgInfo) {
                     rsp.add("debug", dbgInfo);
                     dbgInfo.add( "ufTerms", it );
