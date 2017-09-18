@@ -1,4 +1,4 @@
-package org.dice.solrenhancements.morelikethis;
+package org.dice.solrenhancements.relevancyfeedback;
 
 /**
  * Created by simon.hughes on 9/2/14.
@@ -24,7 +24,6 @@ import org.apache.lucene.analysis.TokenStream;
 import org.apache.lucene.analysis.payloads.PayloadHelper;
 import org.apache.lucene.analysis.tokenattributes.CharTermAttribute;
 import org.apache.lucene.analysis.tokenattributes.PayloadAttribute;
-import org.apache.lucene.analysis.tokenattributes.TypeAttribute;
 import org.apache.lucene.document.Document;
 import org.apache.lucene.index.*;
 import org.apache.lucene.search.BooleanClause;
@@ -86,7 +85,7 @@ import java.util.*;
  * IndexReader ir = ...
  * IndexSearcher is = ...
  * <p/>
- * MoreLikeThis mlt = new MoreLikeThis(ir);
+ * RelevancyFeedback mlt = new RelevancyFeedback(ir);
  * Reader target = ... // orig source of doc you want to find similarities to
  * Query query = mlt.queryFromDocuments( target);
  * <p/>
@@ -99,7 +98,7 @@ import java.util.*;
  * Thus you:
  * <ol>
  * <li> do your normal, Lucene setup for searching,
- * <li> create a MoreLikeThis,
+ * <li> create a RelevancyFeedback,
  * <li> get the text of the doc you want to find similarities to
  * <li> then call one of the queryFromDocuments() calls to generate a similarity query
  * <li> call the searcher to find the similar docs
@@ -137,7 +136,7 @@ import java.util.*;
  * - optimise: when no termvector support available - used maxNumTermsParsed to limit amount of tokenization
  * </pre>
  */
-public final class MoreLikeThis {
+public final class RelevancyFeedback {
 
     /**
      * Default maximum number of tokens to parse in each example doc field that is not stored with TermVector support.
@@ -386,11 +385,11 @@ public final class MoreLikeThis {
     /**
      * Constructor requiring an IndexReader.
      */
-    public MoreLikeThis(IndexReader ir) {
+    public RelevancyFeedback(IndexReader ir) {
         this(ir, new ClassicSimilarity());
     }
 
-    public MoreLikeThis(IndexReader ir, TFIDFSimilarity sim) {
+    public RelevancyFeedback(IndexReader ir, TFIDFSimilarity sim) {
         this.ir = ir;
         this.similarity = sim;
 
@@ -732,7 +731,7 @@ public final class MoreLikeThis {
     /**
      * Set the set of stopwords.
      * Any word in this set is considered "uninteresting" and ignored.
-     * Even if your Analyzer allows stopwords, you might want to tell the MoreLikeThis code to ignore them, as
+     * Even if your Analyzer allows stopwords, you might want to tell the RelevancyFeedback code to ignore them, as
      * for the purposes of document similarity it seems reasonable to assume that "a stop word is never interesting".
      *
      * @param stopWords set of stopwords, if null it means to allow stop words
@@ -908,9 +907,9 @@ public final class MoreLikeThis {
 
         if(streamBodyfields == null){
             throw new UnsupportedOperationException(
-                    String.format("To use MoreLikeThis to process a document stream, a field list must be specified "
+                    String.format("To use RelevancyFeedback to process a document stream, a field list must be specified "
                                 + "using either the %s parameter or the %s parameter",
-                        MoreLikeThisParams.SIMILARITY_FIELDS, MoreLikeThisParams.STREAM_BODY_FL));
+                        RFParams.SIMILARITY_FIELDS, RFParams.STREAM_BODY_FL));
         }
 
         Map<String,Map<String, Flt>> fieldTermFreq = new HashMap<String, Map<String, Flt>>();
@@ -923,9 +922,9 @@ public final class MoreLikeThis {
         if(getStreamHead() != null){
             if(streamHeadfields == null){
                 throw new UnsupportedOperationException(
-                        String.format("To use MoreLikeThis to process a document stream using the stream.head as input,"
+                        String.format("To use RelevancyFeedback to process a document stream using the stream.head as input,"
                                     +"a field list must be specified using either the %s parameter or the %s parameter",
-                        MoreLikeThisParams.SIMILARITY_FIELDS, MoreLikeThisParams.STREAM_HEAD_FL));
+                        RFParams.SIMILARITY_FIELDS, RFParams.STREAM_HEAD_FL));
             }
             for(String fieldName: streamHeadfields){
                 Map<String, Flt> words = null;
@@ -1188,7 +1187,7 @@ public final class MoreLikeThis {
     private void addTermWeights(Reader reader, Map<String, Flt> termWeightMap, String fieldName)
             throws IOException {
         if (analyzer == null) {
-            throw new UnsupportedOperationException("To use MoreLikeThis without " +
+            throw new UnsupportedOperationException("To use RelevancyFeedback without " +
                     "term vectors, you must provide an Analyzer");
         }
 

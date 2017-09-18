@@ -1,4 +1,4 @@
-package org.dice.solrenhancements.morelikethis;
+package org.dice.solrenhancements.relevancyfeedback;
 
 /**
  * Created by simon.hughes on 9/2/14.
@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * Helper class for MoreLikeThis that can be called from other request handlers
+ * Helper class for RelevancyFeedback that can be called from other request handlers
  */
 public class MoreLikeThisHelper
 {
@@ -35,7 +35,7 @@ public class MoreLikeThisHelper
 
     final SolrIndexSearcher searcher;
     final QParser qParser;
-    final MoreLikeThis mlt;
+    final RelevancyFeedback mlt;
     final IndexReader reader;
     final SchemaField uniqueKeyField;
     final boolean needDocSet;
@@ -50,28 +50,28 @@ public class MoreLikeThisHelper
         this.needDocSet = params.getBool(FacetParams.FACET, false);
 
         SolrParams required = params.required();
-        String[] fields = splitList.split(required.get(MoreLikeThisParams.SIMILARITY_FIELDS));
+        String[] fields = splitList.split(required.get(RFParams.SIMILARITY_FIELDS));
         if( fields.length < 1 ) {
             throw new SolrException( SolrException.ErrorCode.BAD_REQUEST,
-                    "MoreLikeThis requires at least one similarity field: "+MoreLikeThisParams.SIMILARITY_FIELDS );
+                    "RelevancyFeedback requires at least one similarity field: "+ RFParams.SIMILARITY_FIELDS );
         }
 
-        this.mlt = new MoreLikeThis( reader );
+        this.mlt = new RelevancyFeedback( reader );
         mlt.setFieldNames(fields);
 
-        final String flMustMatch = params.get(MoreLikeThisParams.FL_MUST_MATCH);
+        final String flMustMatch = params.get(RFParams.FL_MUST_MATCH);
         if( flMustMatch != null && flMustMatch.trim().length() > 0 ) {
             String[] mustMatchFields = splitList.split(flMustMatch.trim());
             mlt.setMatchFieldNames(mustMatchFields);
         }
 
-        final String flMustNOTMatch = params.get(MoreLikeThisParams.FL_MUST_NOT_MATCH);
+        final String flMustNOTMatch = params.get(RFParams.FL_MUST_NOT_MATCH);
         if( flMustNOTMatch != null && flMustNOTMatch.trim().length() > 0 ) {
             String[] differntMatchFields = splitList.split(flMustNOTMatch.trim());
             mlt.setDifferentFieldNames(differntMatchFields);
         }
 
-        String[] payloadFields = getFieldList(MoreLikeThisParams.PAYLOAD_FIELDS, params);
+        String[] payloadFields = getFieldList(RFParams.PAYLOAD_FIELDS, params);
         if(payloadFields != null){
             throw new RuntimeException("Payload fields are not currently supported");
             //mlt.setPayloadFields(payloadFields);
@@ -80,38 +80,38 @@ public class MoreLikeThisHelper
 
         // configurable params
 
-        mlt.setMm(                params.get(MoreLikeThisParams.MM,                       MoreLikeThis.DEFAULT_MM));
-        mlt.setMinTermFreq(       params.getInt(MoreLikeThisParams.MIN_TERM_FREQ,         MoreLikeThis.DEFAULT_MIN_TERM_FREQ));
-        mlt.setMinDocFreq(        params.getInt(MoreLikeThisParams.MIN_DOC_FREQ,          MoreLikeThis.DEFAULT_MIN_DOC_FREQ));
-        mlt.setMaxDocFreq(        params.getInt(MoreLikeThisParams.MAX_DOC_FREQ,          MoreLikeThis.DEFAULT_MAX_DOC_FREQ));
-        mlt.setMinWordLen(        params.getInt(MoreLikeThisParams.MIN_WORD_LEN,          MoreLikeThis.DEFAULT_MIN_WORD_LENGTH));
-        mlt.setMaxWordLen(        params.getInt(MoreLikeThisParams.MAX_WORD_LEN,          MoreLikeThis.DEFAULT_MAX_WORD_LENGTH));
+        mlt.setMm(                params.get(RFParams.MM,                       RelevancyFeedback.DEFAULT_MM));
+        mlt.setMinTermFreq(       params.getInt(RFParams.MIN_TERM_FREQ,         RelevancyFeedback.DEFAULT_MIN_TERM_FREQ));
+        mlt.setMinDocFreq(        params.getInt(RFParams.MIN_DOC_FREQ,          RelevancyFeedback.DEFAULT_MIN_DOC_FREQ));
+        mlt.setMaxDocFreq(        params.getInt(RFParams.MAX_DOC_FREQ,          RelevancyFeedback.DEFAULT_MAX_DOC_FREQ));
+        mlt.setMinWordLen(        params.getInt(RFParams.MIN_WORD_LEN,          RelevancyFeedback.DEFAULT_MIN_WORD_LENGTH));
+        mlt.setMaxWordLen(        params.getInt(RFParams.MAX_WORD_LEN,          RelevancyFeedback.DEFAULT_MAX_WORD_LENGTH));
 
-        mlt.setBoost(             params.getBool(MoreLikeThisParams.BOOST, true ) );
+        mlt.setBoost(             params.getBool(RFParams.BOOST, true ) );
 
         // new parameters
-        mlt.setBoostFn(params.get(MoreLikeThisParams.BOOST_FN));
-        mlt.setNormalizeFieldBoosts(params.getBool(MoreLikeThisParams.NORMALIZE_FIELD_BOOSTS, MoreLikeThis.DEFAULT_NORMALIZE_FIELD_BOOSTS));
+        mlt.setBoostFn(params.get(RFParams.BOOST_FN));
+        mlt.setNormalizeFieldBoosts(params.getBool(RFParams.NORMALIZE_FIELD_BOOSTS, RelevancyFeedback.DEFAULT_NORMALIZE_FIELD_BOOSTS));
         // new versions of previous parameters moved to the field level
-        mlt.setMaxQueryTermsPerField(params.getInt(MoreLikeThisParams.MAX_QUERY_TERMS_PER_FIELD, MoreLikeThis.DEFAULT_MAX_QUERY_TERMS_PER_FIELD));
-        mlt.setMaxNumTokensParsedPerField(params.getInt(MoreLikeThisParams.MAX_NUM_TOKENS_PARSED_PER_FIELD, MoreLikeThis.DEFAULT_MAX_NUM_TOKENS_PARSED_PER_FIELD));
-        mlt.setLogTf(params.getBool(MoreLikeThisParams.IS_LOG_TF, MoreLikeThis.DEFAULT_IS_LOG_TF));
+        mlt.setMaxQueryTermsPerField(params.getInt(RFParams.MAX_QUERY_TERMS_PER_FIELD, RelevancyFeedback.DEFAULT_MAX_QUERY_TERMS_PER_FIELD));
+        mlt.setMaxNumTokensParsedPerField(params.getInt(RFParams.MAX_NUM_TOKENS_PARSED_PER_FIELD, RelevancyFeedback.DEFAULT_MAX_NUM_TOKENS_PARSED_PER_FIELD));
+        mlt.setLogTf(params.getBool(RFParams.IS_LOG_TF, RelevancyFeedback.DEFAULT_IS_LOG_TF));
 
-        mlt.setBoostFields(SolrPluginUtils.parseFieldBoosts(params.getParams(MoreLikeThisParams.QF)));
-        mlt.setStreamBoostFields(SolrPluginUtils.parseFieldBoosts(params.getParams(MoreLikeThisParams.STREAM_QF)));
+        mlt.setBoostFields(SolrPluginUtils.parseFieldBoosts(params.getParams(RFParams.QF)));
+        mlt.setStreamBoostFields(SolrPluginUtils.parseFieldBoosts(params.getParams(RFParams.STREAM_QF)));
 
-        String streamHead = params.get(MoreLikeThisParams.STREAM_HEAD);
+        String streamHead = params.get(RFParams.STREAM_HEAD);
         if(streamHead != null) {
             mlt.setStreamHead(streamHead);
         }
 
         // Set stream fields
-        String[] streamHeadFields = getFieldList(MoreLikeThisParams.STREAM_HEAD_FL, params);
+        String[] streamHeadFields = getFieldList(RFParams.STREAM_HEAD_FL, params);
         if(streamHeadFields != null){
             mlt.setStreamHeadfieldNames(streamHeadFields);
         }
 
-        String[] streamBodyFields = getFieldList(MoreLikeThisParams.STREAM_BODY_FL, params);
+        String[] streamBodyFields = getFieldList(RFParams.STREAM_BODY_FL, params);
         if(streamBodyFields != null){
             mlt.setStreamBodyfieldNames(streamBodyFields);
         }
@@ -193,7 +193,7 @@ public class MoreLikeThisHelper
         if(mltQuery.getMustMatchQuery() != null || mltQuery.getMustNOTMatchQuery() != null){
             throw new RuntimeException(
                     String.format("The %s and the %s parameters are not supported for content stream queries",
-                    MoreLikeThisParams.FL_MUST_MATCH, MoreLikeThisParams.FL_MUST_NOT_MATCH));
+                    RFParams.FL_MUST_MATCH, RFParams.FL_MUST_NOT_MATCH));
         }
 
         Query boostedMLTQuery = getBoostedFunctionQuery( rawMLTQuery );
@@ -206,7 +206,7 @@ public class MoreLikeThisHelper
         return new MLTResult(mltQuery.getMltTerms(), boostedMLTQuery, results);
     }
 
-    public MoreLikeThis getMoreLikeThis()
+    public RelevancyFeedback getMoreLikeThis()
     {
         return mlt;
     }

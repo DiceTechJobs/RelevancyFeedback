@@ -31,9 +31,9 @@ import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.*;
 import org.apache.solr.util.SolrPluginUtils;
 import org.dice.solrenhancements.JarVersion;
-import org.dice.solrenhancements.morelikethis.InterestingTerm;
-import org.dice.solrenhancements.morelikethis.MLTResult;
-import org.dice.solrenhancements.morelikethis.MLTTerm;
+import org.dice.solrenhancements.relevancyfeedback.InterestingTerm;
+import org.dice.solrenhancements.relevancyfeedback.MLTResult;
+import org.dice.solrenhancements.relevancyfeedback.MLTTerm;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,7 +47,7 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * Solr MoreLikeThis --
+ * Solr RelevancyFeedback --
  *
  * Return similar documents either based on a single document or based on posted text.
  *
@@ -121,7 +121,7 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
             int start = params.getInt(CommonParams.START, 0);
             int rows  = params.getInt(CommonParams.ROWS, 10);
 
-            // Find documents MoreLikeThis - either with a reader or a query
+            // Find documents RelevancyFeedback - either with a reader or a query
             // --------------------------------------------------------------------------------
             if (q == null) {
                 throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
@@ -230,7 +230,7 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
         DocIterator iterator = match.iterator();
         MLTResult mltResult = null;
         if (iterator.hasNext()) {
-            // do a MoreLikeThis query for each document in results
+            // do a RelevancyFeedback query for each document in results
             mltResult = uff.expandQueryAndReExecute(iterator, seedQuery, start, rows, mltFqFilters, flags, sortSpec.getSort());
         }
         return mltResult;
@@ -330,7 +330,7 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
 
     @Override
     public String getDescription() {
-        return "Solr MoreLikeThis";
+        return "Solr RelevancyFeedback";
     }
 
     @Override
@@ -341,7 +341,7 @@ public class DiceUnsupervisedFeedbackHandler extends RequestHandlerBase
     @Override
     public URL[] getDocs() {
         try {
-            return new URL[] { new URL("http://wiki.apache.org/solr/MoreLikeThis") };
+            return new URL[] { new URL("http://wiki.apache.org/solr/RelevancyFeedback") };
         }
         catch( MalformedURLException ex ) { return null; }
     }

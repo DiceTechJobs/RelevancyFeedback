@@ -1,4 +1,4 @@
-package org.dice.solrenhancements.morelikethis;
+package org.dice.solrenhancements.relevancyfeedback;
 
 import org.apache.lucene.queries.payloads.AveragePayloadFunction;
 import org.apache.lucene.queries.payloads.PayloadScoreQuery;

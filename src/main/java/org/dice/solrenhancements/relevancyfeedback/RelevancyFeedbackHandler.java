@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package org.dice.solrenhancements.morelikethis;
+package org.dice.solrenhancements.relevancyfeedback;
 
 import com.google.common.base.Strings;
 import org.apache.lucene.search.Query;
@@ -43,7 +43,7 @@ import java.net.URL;
 import java.util.*;
 
 /**
- * Solr MoreLikeThis --
+ * Solr RelevancyFeedback --
  *
  * Return similar documents either based on a single document or based on posted text.
  *
@@ -100,7 +100,7 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
             }
 
             targetFqFilters = getFilters(req, CommonParams.FQ);
-            mltFqFilters    = getFilters(req, MoreLikeThisParams.FQ);
+            mltFqFilters    = getFilters(req, RFParams.FQ);
         } catch (SyntaxError e) {
             throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, e);
         }
@@ -108,7 +108,7 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
         MoreLikeThisHelper mlt = new MoreLikeThisHelper( params, searcher, uniqueKeyField, parser );
 
         // Hold on to the interesting terms if relevant
-        MoreLikeThisParams.TermStyle termStyle = MoreLikeThisParams.TermStyle.get(params.get(MoreLikeThisParams.INTERESTING_TERMS));
+        RFParams.TermStyle termStyle = RFParams.TermStyle.get(params.get(RFParams.INTERESTING_TERMS));
 
         MLTResult mltResult = null;
         DocListAndSet mltDocs = null;
@@ -125,7 +125,7 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
                 reader = getContentStreamReader(req, reader);
                 q = "NULL - from content stream";
             }
-            // Find documents MoreLikeThis - either with a reader or a query
+            // Find documents RelevancyFeedback - either with a reader or a query
             // --------------------------------------------------------------------------------
             if (reader != null) {
                 // this will only be initialized if used with a content stream (see above)
@@ -136,7 +136,7 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
                         targetFqFilters, mltFqFilters, searcher, mlt,  start, rows);
             } else {
                 throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
-                        "MoreLikeThis requires either a query (?q=) or text to find similar documents.");
+                        "RelevancyFeedback requires either a query (?q=) or text to find similar documents.");
             }
             if(mltResult != null)
             {
@@ -154,7 +154,7 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
         }
         rsp.add( "response", mltDocs.docList );
 
-        if( mltResult != null && termStyle != MoreLikeThisParams.TermStyle.NONE) {
+        if( mltResult != null && termStyle != RFParams.TermStyle.NONE) {
             addInterestingTerms(rsp, termStyle, mltResult);
         }
 
@@ -189,7 +189,7 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
             }
             if (iter.hasNext()) {
                 throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
-                        "MoreLikeThis does not support multiple ContentStreams");
+                        "RelevancyFeedback does not support multiple ContentStreams");
             }
         }
         return reader;
@@ -197,13 +197,13 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
 
     private MLTResult getMoreLikeTheseFromQuery(SolrQueryResponse rsp, SolrParams params, int flags, String q, Query query, SortSpec sortSpec, List<Query> targetFqFilters, List<Query> mltFqFilters, SolrIndexSearcher searcher, MoreLikeThisHelper mlt, int start, int rows) throws IOException, SyntaxError {
 
-        boolean includeMatch = params.getBool(MoreLikeThisParams.MATCH_INCLUDE, true);
-        int matchOffset = params.getInt(MoreLikeThisParams.MATCH_OFFSET, 0);
+        boolean includeMatch = params.getBool(RFParams.MATCH_INCLUDE, true);
+        int matchOffset = params.getInt(RFParams.MATCH_OFFSET, 0);
         // Find the base match
         DocList match = searcher.getDocList(query, targetFqFilters, null, matchOffset, 10000, flags); // only get the first one...
         if(match.matches() == 0){
             throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
-                    String.format("MoreLikeThis was unable to find any documents matching the query: '%s'.", q));
+                    String.format("RelevancyFeedback was unable to find any documents matching the query: '%s'.", q));
         }
 
         if (includeMatch) {
@@ -213,7 +213,7 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
         // This is an iterator, but we only handle the first match
         DocIterator iterator = match.iterator();
         if (iterator.hasNext()) {
-            // do a MoreLikeThis query for each document in results
+            // do a RelevancyFeedback query for each document in results
             return mlt.getMoreLikeTheseFromDocs(iterator, start, rows, mltFqFilters, flags, sortSpec.getSort());
         }
         return null;
@@ -231,12 +231,12 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
         return terms;
     }
 
-    private void addInterestingTerms(SolrQueryResponse rsp, MoreLikeThisParams.TermStyle termStyle, MLTResult mltResult) {
+    private void addInterestingTerms(SolrQueryResponse rsp, RFParams.TermStyle termStyle, MLTResult mltResult) {
 
         List<MLTTerm> mltTerms = mltResult.getMltTerms();
         Collections.sort(mltTerms, MLTTerm.FLD_BOOST_X_SCORE_ORDER);
 
-        if( termStyle == MoreLikeThisParams.TermStyle.DETAILS ) {
+        if( termStyle == RFParams.TermStyle.DETAILS ) {
             List<InterestingTerm> interesting = extractInterestingTerms(mltResult.getMltTerms());
 
             int longest = 0;
@@ -354,7 +354,7 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
 
     @Override
     public String getDescription() {
-        return "Dice custom MoreLikeThis handler";
+        return "Dice custom RelevancyFeedback handler";
     }
 
     @Override
@@ -376,7 +376,7 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
     @Override
     public URL[] getDocs() {
         try {
-            return new URL[] { new URL("http://wiki.apache.org/solr/MoreLikeThis") };
+            return new URL[] { new URL("http://wiki.apache.org/solr/RelevancyFeedback") };
         }
         catch( MalformedURLException ex ) { return null; }
     }

@@ -16,9 +16,9 @@ import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.*;
 import org.apache.solr.util.SolrPluginUtils;
-import org.dice.solrenhancements.morelikethis.MLTQuery;
-import org.dice.solrenhancements.morelikethis.MLTResult;
-import org.dice.solrenhancements.morelikethis.MoreLikeThis;
+import org.dice.solrenhancements.relevancyfeedback.MLTQuery;
+import org.dice.solrenhancements.relevancyfeedback.MLTResult;
+import org.dice.solrenhancements.relevancyfeedback.RelevancyFeedback;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,7 +26,7 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 /**
- * Helper class for MoreLikeThis that can be called from other request handlers
+ * Helper class for RelevancyFeedback that can be called from other request handlers
  */
 public class UnsupervisedFeedbackHelper
 {
@@ -35,7 +35,7 @@ public class UnsupervisedFeedbackHelper
 
     final SolrIndexSearcher searcher;
     final QParser qParser;
-    final MoreLikeThis moreLikeThis;
+    final RelevancyFeedback moreLikeThis;
     final IndexReader reader;
     final SchemaField uniqueKeyField;
     final boolean needDocSet;
@@ -52,11 +52,11 @@ public class UnsupervisedFeedbackHelper
         String[] fields = splitList.split( required.get(UnsupervisedFeedbackParams.SIMILARITY_FIELDS) );
         if( fields.length < 1 ) {
             throw new SolrException( SolrException.ErrorCode.BAD_REQUEST,
-                    "MoreLikeThis requires at least one similarity field: "+ UnsupervisedFeedbackParams.SIMILARITY_FIELDS );
+                    "RelevancyFeedback requires at least one similarity field: "+ UnsupervisedFeedbackParams.SIMILARITY_FIELDS );
         }
 
-        //this.moreLikeThis = new MoreLikeThis()
-        this.moreLikeThis = new MoreLikeThis( reader ); // TODO -- after LUCENE-896, we can use , searcher.getSimilarity() );
+        //this.moreLikeThis = new RelevancyFeedback()
+        this.moreLikeThis = new RelevancyFeedback( reader ); // TODO -- after LUCENE-896, we can use , searcher.getSimilarity() );
         moreLikeThis.setFieldNames(fields);
 
         final String sPayloadFieldList = params.get(UnsupervisedFeedbackParams.PAYLOAD_FIELDS);
@@ -68,19 +68,19 @@ public class UnsupervisedFeedbackHelper
 
         // configurable params
 
-        moreLikeThis.setMinTermFreq(params.getInt(UnsupervisedFeedbackParams.MIN_TERM_FREQ, MoreLikeThis.DEFAULT_MIN_TERM_FREQ));
-        moreLikeThis.setMinDocFreq(params.getInt(UnsupervisedFeedbackParams.MIN_DOC_FREQ, MoreLikeThis.DEFAULT_MIN_DOC_FREQ));
-        moreLikeThis.setMaxDocFreq(params.getInt(UnsupervisedFeedbackParams.MAX_DOC_FREQ, MoreLikeThis.DEFAULT_MAX_DOC_FREQ));
-        moreLikeThis.setMinWordLen(params.getInt(UnsupervisedFeedbackParams.MIN_WORD_LEN, MoreLikeThis.DEFAULT_MIN_WORD_LENGTH));
-        moreLikeThis.setMaxWordLen(params.getInt(UnsupervisedFeedbackParams.MAX_WORD_LEN, MoreLikeThis.DEFAULT_MAX_WORD_LENGTH));
+        moreLikeThis.setMinTermFreq(params.getInt(UnsupervisedFeedbackParams.MIN_TERM_FREQ, RelevancyFeedback.DEFAULT_MIN_TERM_FREQ));
+        moreLikeThis.setMinDocFreq(params.getInt(UnsupervisedFeedbackParams.MIN_DOC_FREQ, RelevancyFeedback.DEFAULT_MIN_DOC_FREQ));
+        moreLikeThis.setMaxDocFreq(params.getInt(UnsupervisedFeedbackParams.MAX_DOC_FREQ, RelevancyFeedback.DEFAULT_MAX_DOC_FREQ));
+        moreLikeThis.setMinWordLen(params.getInt(UnsupervisedFeedbackParams.MIN_WORD_LEN, RelevancyFeedback.DEFAULT_MIN_WORD_LENGTH));
+        moreLikeThis.setMaxWordLen(params.getInt(UnsupervisedFeedbackParams.MAX_WORD_LEN, RelevancyFeedback.DEFAULT_MAX_WORD_LENGTH));
 
         // new parameters
         moreLikeThis.setBoostFn(params.get(UnsupervisedFeedbackParams.BOOST_FN));
-        moreLikeThis.setNormalizeFieldBoosts(params.getBool(UnsupervisedFeedbackParams.NORMALIZE_FIELD_BOOSTS, MoreLikeThis.DEFAULT_NORMALIZE_FIELD_BOOSTS));
+        moreLikeThis.setNormalizeFieldBoosts(params.getBool(UnsupervisedFeedbackParams.NORMALIZE_FIELD_BOOSTS, RelevancyFeedback.DEFAULT_NORMALIZE_FIELD_BOOSTS));
         // new versions of previous parameters moved to the field level
-        moreLikeThis.setMaxQueryTermsPerField(params.getInt(UnsupervisedFeedbackParams.MAX_QUERY_TERMS_PER_FIELD, MoreLikeThis.DEFAULT_MAX_QUERY_TERMS_PER_FIELD));
-        moreLikeThis.setMaxNumTokensParsedPerField(params.getInt(UnsupervisedFeedbackParams.MAX_NUM_TOKENS_PARSED_PER_FIELD, MoreLikeThis.DEFAULT_MAX_NUM_TOKENS_PARSED_PER_FIELD));
-        moreLikeThis.setLogTf(params.getBool(UnsupervisedFeedbackParams.IS_LOG_TF, MoreLikeThis.DEFAULT_IS_LOG_TF));
+        moreLikeThis.setMaxQueryTermsPerField(params.getInt(UnsupervisedFeedbackParams.MAX_QUERY_TERMS_PER_FIELD, RelevancyFeedback.DEFAULT_MAX_QUERY_TERMS_PER_FIELD));
+        moreLikeThis.setMaxNumTokensParsedPerField(params.getInt(UnsupervisedFeedbackParams.MAX_NUM_TOKENS_PARSED_PER_FIELD, RelevancyFeedback.DEFAULT_MAX_NUM_TOKENS_PARSED_PER_FIELD));
+        moreLikeThis.setLogTf(params.getBool(UnsupervisedFeedbackParams.IS_LOG_TF, RelevancyFeedback.DEFAULT_IS_LOG_TF));
 
         moreLikeThis.setBoostFields(SolrPluginUtils.parseFieldBoosts(params.getParams(UnsupervisedFeedbackParams.QF)));
     }

@@ -1,4 +1,4 @@
-package org.dice.solrenhancements.morelikethis;
+package org.dice.solrenhancements.relevancyfeedback;
 
 import com.google.common.base.Strings;
 import org.apache.lucene.index.Term;
