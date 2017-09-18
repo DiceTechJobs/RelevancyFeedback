@@ -7,8 +7,11 @@ Dice.com's solr plugins for performing personalized search, and recommendations 
 A pre-built jar file can be found in the ```./target``` folder. The project contains a maven pom.xml file which can also be used to build it from source.
 
 ## Supported Solr versions
-Current branch is compiled for Solr 5.4. I will be adding branches compiled against Solr 6 versions shortly. If there is a particular version of Solr you need this for, please create a GitHub issue and I'll see what I can do.
-To manually compile it for a later version, use maven to compile the plugins using the pom.xml file, and update the versions of the solr and lucene libraries in that file, and use maven to pull in those dependencies. Then fix any compilation errors. Later versions of solr (6.x) use query builders to build the boolean queries, which is likely what needs to be fixed to support 6.x.
+- Solr 5.4 (see branch)
+- Solr 6.3 (see branch) **also master**
+
+If there is a particular version of Solr you need this for, please create a GitHub issue and I'll see what I can do.
+To manually compile it for a specific version, use maven to compile the plugins using the pom.xml file, and update the versions of the solr and lucene libraries in that file, and use maven to pull in those dependencies. Then fix any compilation errors.
  
 ## Importing into SOLR
 Please see the official SOLR guidelines for registering plugins with solr. This basically involves simply dropping the jar file into one of the folders that Solr checks for class and jar files on core reload.  
