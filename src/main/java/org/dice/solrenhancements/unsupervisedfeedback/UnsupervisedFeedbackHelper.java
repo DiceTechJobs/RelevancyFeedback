@@ -9,7 +9,6 @@ import org.apache.lucene.queries.function.BoostedQuery;
 import org.apache.lucene.queries.function.FunctionQuery;
 import org.apache.lucene.queries.function.ValueSource;
 import org.apache.lucene.queries.function.valuesource.QueryValueSource;
-import org.apache.lucene.queries.payloads.PayloadTermQuery;
 import org.apache.lucene.search.*;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.params.FacetParams;
@@ -17,10 +16,12 @@ import org.apache.solr.common.params.SolrParams;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.*;
 import org.apache.solr.util.SolrPluginUtils;
+import org.dice.solrenhancements.relevancyfeedback.RFQuery;
+import org.dice.solrenhancements.relevancyfeedback.RFResult;
+import org.dice.solrenhancements.relevancyfeedback.RelevancyFeedback;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.regex.Pattern;
 
@@ -34,7 +35,7 @@ public class UnsupervisedFeedbackHelper
 
     final SolrIndexSearcher searcher;
     final QParser qParser;
-    final UnsupervisedFeedback uf;
+    final RelevancyFeedback relevancyFeedback;
     final IndexReader reader;
     final SchemaField uniqueKeyField;
     final boolean needDocSet;
@@ -54,50 +55,43 @@ public class UnsupervisedFeedbackHelper
                     "RelevancyFeedback requires at least one similarity field: "+ UnsupervisedFeedbackParams.SIMILARITY_FIELDS );
         }
 
-        this.uf = new UnsupervisedFeedback( reader ); // TODO -- after LUCENE-896, we can use , searcher.getSimilarity() );
-        uf.setFieldNames(fields);
+        //this.relevancyFeedback = new RelevancyFeedback()
+        this.relevancyFeedback = new RelevancyFeedback( reader ); // TODO -- after LUCENE-896, we can use , searcher.getSimilarity() );
+        relevancyFeedback.setFieldNames(fields);
 
         final String sPayloadFieldList = params.get(UnsupervisedFeedbackParams.PAYLOAD_FIELDS);
         if(sPayloadFieldList != null && sPayloadFieldList.trim().length() > 0) {
             String[] payloadFields = splitList.split(sPayloadFieldList);
-            uf.setPayloadFields(payloadFields);
+            relevancyFeedback.setPayloadFields(payloadFields);
         }
-        uf.setAnalyzer(searcher.getSchema().getIndexAnalyzer());
+        relevancyFeedback.setAnalyzer(searcher.getSchema().getIndexAnalyzer());
 
         // configurable params
 
-        uf.setMinTermFreq(params.getInt(UnsupervisedFeedbackParams.MIN_TERM_FREQ, UnsupervisedFeedback.DEFAULT_MIN_TERM_FREQ));
-        uf.setMinDocFreq(params.getInt(UnsupervisedFeedbackParams.MIN_DOC_FREQ, UnsupervisedFeedback.DEFAULT_MIN_DOC_FREQ));
-        uf.setMaxDocFreq(params.getInt(UnsupervisedFeedbackParams.MAX_DOC_FREQ, UnsupervisedFeedback.DEFAULT_MAX_DOC_FREQ));
-        uf.setMinWordLen(params.getInt(UnsupervisedFeedbackParams.MIN_WORD_LEN, UnsupervisedFeedback.DEFAULT_MIN_WORD_LENGTH));
-        uf.setMaxWordLen(params.getInt(UnsupervisedFeedbackParams.MAX_WORD_LEN, UnsupervisedFeedback.DEFAULT_MAX_WORD_LENGTH));
+        relevancyFeedback.setMinTermFreq(params.getInt(UnsupervisedFeedbackParams.MIN_TERM_FREQ, RelevancyFeedback.DEFAULT_MIN_TERM_FREQ));
+        relevancyFeedback.setMinDocFreq(params.getInt(UnsupervisedFeedbackParams.MIN_DOC_FREQ, RelevancyFeedback.DEFAULT_MIN_DOC_FREQ));
+        relevancyFeedback.setMaxDocFreq(params.getInt(UnsupervisedFeedbackParams.MAX_DOC_FREQ, RelevancyFeedback.DEFAULT_MAX_DOC_FREQ));
+        relevancyFeedback.setMinWordLen(params.getInt(UnsupervisedFeedbackParams.MIN_WORD_LEN, RelevancyFeedback.DEFAULT_MIN_WORD_LENGTH));
+        relevancyFeedback.setMaxWordLen(params.getInt(UnsupervisedFeedbackParams.MAX_WORD_LEN, RelevancyFeedback.DEFAULT_MAX_WORD_LENGTH));
 
         // new parameters
-        uf.setBoostFn(params.get(UnsupervisedFeedbackParams.BOOST_FN));
-        uf.setNormalizeFieldBoosts(params.getBool(UnsupervisedFeedbackParams.NORMALIZE_FIELD_BOOSTS, UnsupervisedFeedback.DEFAULT_NORMALIZE_FIELD_BOOSTS));
+        relevancyFeedback.setBoostFn(params.get(UnsupervisedFeedbackParams.BOOST_FN));
+        relevancyFeedback.setNormalizeFieldBoosts(params.getBool(UnsupervisedFeedbackParams.NORMALIZE_FIELD_BOOSTS, RelevancyFeedback.DEFAULT_NORMALIZE_FIELD_BOOSTS));
         // new versions of previous parameters moved to the field level
-        uf.setMaxQueryTermsPerField(params.getInt(UnsupervisedFeedbackParams.MAX_QUERY_TERMS_PER_FIELD, UnsupervisedFeedback.DEFAULT_MAX_QUERY_TERMS_PER_FIELD));
-        uf.setMaxNumTokensParsedPerField(params.getInt(UnsupervisedFeedbackParams.MAX_NUM_TOKENS_PARSED_PER_FIELD, UnsupervisedFeedback.DEFAULT_MAX_NUM_TOKENS_PARSED_PER_FIELD));
-        uf.setLogTf(params.getBool(UnsupervisedFeedbackParams.IS_LOG_TF, UnsupervisedFeedback.DEFAULT_IS_LOG_TF));
+        relevancyFeedback.setMaxQueryTermsPerField(params.getInt(UnsupervisedFeedbackParams.MAX_QUERY_TERMS_PER_FIELD, RelevancyFeedback.DEFAULT_MAX_QUERY_TERMS_PER_FIELD));
+        relevancyFeedback.setMaxNumTokensParsedPerField(params.getInt(UnsupervisedFeedbackParams.MAX_NUM_TOKENS_PARSED_PER_FIELD, RelevancyFeedback.DEFAULT_MAX_NUM_TOKENS_PARSED_PER_FIELD));
+        relevancyFeedback.setLogTf(params.getBool(UnsupervisedFeedbackParams.IS_LOG_TF, RelevancyFeedback.DEFAULT_IS_LOG_TF));
 
-        uf.setBoostFields(SolrPluginUtils.parseFieldBoosts(params.getParams(UnsupervisedFeedbackParams.QF)));
-    }
-
-    private BooleanQuery rawUFQuery;
-    private Query boostedUfQuery;
-    private BooleanQuery realUFQuery;
-
-    public Query getRawUFQuery(){
-        return rawUFQuery;
+        relevancyFeedback.setBoostFields(SolrPluginUtils.parseFieldBoosts(params.getParams(UnsupervisedFeedbackParams.QF)));
     }
 
     private Query getBoostedFunctionQuery(Query q) throws SyntaxError{
 
-        if (uf.getBoostFn() == null || uf.getBoostFn().trim().length() == 0) {
+        if (relevancyFeedback.getBoostFn() == null || relevancyFeedback.getBoostFn().trim().length() == 0) {
             return q;
         }
 
-        Query boost = this.qParser.subQuery(uf.getBoostFn(), FunctionQParserPlugin.NAME).getQuery();
+        Query boost = this.qParser.subQuery(relevancyFeedback.getBoostFn(), FunctionQParserPlugin.NAME).getQuery();
         ValueSource vs;
         if (boost instanceof FunctionQuery) {
             vs = ((FunctionQuery) boost).getValueSource();
@@ -107,61 +101,36 @@ public class UnsupervisedFeedbackHelper
         return new BoostedQuery(q, vs);
     }
 
-    public DocListAndSet expandQueryAndReExecute(DocIterator iterator, Query seedQuery, int start, int rows, List<Query> filters, List<InterestingTerm> terms, int flags, Sort lsort) throws IOException, SyntaxError
+    public RFResult expandQueryAndReExecute(DocIterator iterator, Query seedQuery, int start, int rows, List<Query> filters, int flags, Sort lsort) throws IOException, SyntaxError
     {
-        rawUFQuery = new BooleanQuery();
-        rawUFQuery.add(seedQuery, BooleanClause.Occur.MUST);
-
         List<Integer> ids = new ArrayList<Integer>();
         while(iterator.hasNext()) {
             ids.add(iterator.nextDoc());
         }
-        // expand original query from matched documents
-        BooleanQuery expansionQuery = uf.queryFromDocuments(ids);
+
+        // start to build final query
+        // add a must clause on the original query, meaning we need it to be matched (likely one a single term or more)
+        BooleanQuery.Builder rawUFQuery = new BooleanQuery.Builder();
+        rawUFQuery.add(seedQuery, BooleanClause.Occur.MUST);
+
+        // expand original query from matched documents, and add as a should query for re-ranking purposes
+
+        RFQuery RFQuery = relevancyFeedback.like(ids);
+        Query expansionQuery  = RFQuery.getOrQuery();
+
         rawUFQuery.add(expansionQuery, BooleanClause.Occur.SHOULD);
 
         // only boost final query, not seed query (don't want to filter expansion query)
-        boostedUfQuery = getBoostedFunctionQuery(rawUFQuery);
-        if( terms != null ) {
-            fillInterestingTermsFromUfQuery(expansionQuery, terms);
-        }
-        realUFQuery = new BooleanQuery();
-        // exclude current document from results
-        realUFQuery.add(boostedUfQuery, BooleanClause.Occur.MUST);
+        Query finalUfQuery = getBoostedFunctionQuery(rawUFQuery.build());
 
         DocListAndSet results = new DocListAndSet();
         if (this.needDocSet) {
-            results = searcher.getDocListAndSet(realUFQuery, filters, lsort, start, rows, flags);
+            results = searcher.getDocListAndSet(finalUfQuery, filters, lsort, start, rows, flags);
         } else {
-            results.docList = searcher.getDocList(realUFQuery, filters, lsort, start, rows, flags);
+            results.docList = searcher.getDocList(finalUfQuery, filters, lsort, start, rows, flags);
         }
-        return results;
-    }
 
-    private void fillInterestingTermsFromUfQuery(Query query, List<InterestingTerm> terms)
-    {
-        List clauses = ((BooleanQuery)query).clauses();
-        for( Object o : clauses ) {
-            Query qry = ((BooleanClause)o).getQuery();
-            InterestingTerm it = new InterestingTerm();
-            if(qry instanceof TermQuery) {
-                TermQuery tq = (TermQuery)qry;
-                it.term = tq.getTerm();
-            }
-            else if(qry instanceof PayloadTermQuery) {
-                PayloadTermQuery ptq = (PayloadTermQuery)qry;
-                it.term = ptq.getTerm();
-            }
-            it.boost = qry.getBoost();
-            terms.add(it);
-        }
-        // alternatively we could use
-        Collections.sort(terms, InterestingTerm.BOOST_ORDER);
-    }
-
-    public UnsupervisedFeedback getUnsupervisedFeedback()
-    {
-        return uf;
+        return new RFResult(RFQuery.getRFTerms(), finalUfQuery, results);
     }
 }
 

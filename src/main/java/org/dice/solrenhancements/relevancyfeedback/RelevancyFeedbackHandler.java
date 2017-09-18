@@ -18,29 +18,26 @@
 package org.dice.solrenhancements.relevancyfeedback;
 
 import com.google.common.base.Strings;
-import org.apache.lucene.queries.payloads.PayloadTermQuery;
-import org.apache.lucene.search.BooleanClause;
-import org.apache.lucene.search.BooleanQuery;
 import org.apache.lucene.search.Query;
-import org.apache.lucene.search.TermQuery;
 import org.apache.solr.common.SolrException;
 import org.apache.solr.common.params.*;
 import org.apache.solr.common.util.ContentStream;
 import org.apache.solr.common.util.NamedList;
 import org.apache.solr.handler.RequestHandlerBase;
+import org.apache.solr.handler.component.FacetComponent;
 import org.apache.solr.request.SimpleFacets;
 import org.apache.solr.request.SolrQueryRequest;
 import org.apache.solr.response.SolrQueryResponse;
 import org.apache.solr.schema.SchemaField;
 import org.apache.solr.search.*;
 import org.apache.solr.util.SolrPluginUtils;
+import org.dice.solrenhancements.JarVersion;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.Reader;
-import java.lang.invoke.MethodHandles;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
@@ -57,7 +54,7 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
     private final static String EDISMAX = ExtendedDismaxQParserPlugin.NAME;
     private String version = null;
 
-    private static final Logger log = LoggerFactory.getLogger(MethodHandles.lookup().lookupClass());
+    private static final Logger log = LoggerFactory.getLogger( RelevancyFeedbackHandler.class );
 
 
     @Override
@@ -152,7 +149,7 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
                 RFResult = rfhelper.getMatchesFromContentSteam(reader, start, rows, rfFqFilters, flags, sortSpec.getSort(), userQuery);
             } else if (rfQ != null) {
                 // Matching options
-                RFResult = getMoreLikeTheseFromQuery(rsp, params, flags, rfQ, rfQuery, userQuery, sortSpec,
+                RFResult = getMatchesFromQuery(rsp, params, flags, rfQ, rfQuery, userQuery, sortSpec,
                         targetFqFilters, rfFqFilters, searcher, rfhelper,  start, rows);
             } else {
                 throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
@@ -160,7 +157,7 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
             }
             if(RFResult != null)
             {
-                rfDocs = RFResult.getDoclist();
+                rfDocs = RFResult.getResults();
             }
 
         } finally {
@@ -173,8 +170,8 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
             rfDocs = new DocListAndSet(); // avoid NPE
         }
         rsp.add( "response", rfDocs.docList );
-        if(RFResult != null && RFResult.rawRFQuery != null) {
-            rsp.add(RFParams.PREFIX + "query:", RFResult.rawRFQuery.toString());
+        if(RFResult != null && RFResult.getQuery() != null) {
+            rsp.add(RFParams.PREFIX + "query:", RFResult.getQuery().toString());
         }
 
         if( RFResult != null && termStyle != RFParams.TermStyle.NONE) {
@@ -218,8 +215,7 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
         return reader;
     }
 
-    private RFResult getMoreLikeTheseFromQuery(SolrQueryResponse rsp, SolrParams params, int flags,
-                                               String q, Query query, Query userQuery, SortSpec sortSpec, List<Query> targetFqFilters, List<Query> rfFqFilters, SolrIndexSearcher searcher, RFHelper rfhelper, int start, int rows) throws IOException, SyntaxError {
+    private RFResult getMatchesFromQuery(SolrQueryResponse rsp, SolrParams params, int flags, String q, Query query, Query userQuery, SortSpec sortSpec, List<Query> targetFqFilters, List<Query> rfFqFilters, SolrIndexSearcher searcher, RFHelper rfHelper, int start, int rows) throws IOException, SyntaxError {
 
         boolean includeMatch = params.getBool(RFParams.MATCH_INCLUDE, true);
         int matchOffset = params.getInt(RFParams.MATCH_OFFSET, 0);
@@ -238,40 +234,30 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
         DocIterator iterator = match.iterator();
         if (iterator.hasNext() || userQuery != null) {
             // do a RelevancyFeedback query for each document in results
-            return rfhelper.getMatchesFromDocs(iterator, start, rows, rfFqFilters, flags, sortSpec.getSort(), userQuery);
+            return rfHelper.getMatchesFromDocs(iterator, start, rows, rfFqFilters, flags, sortSpec.getSort(), userQuery);
         }
         return null;
     }
 
-    private List<InterestingTerm> extractInterestingTerms(Query query){
+    private List<InterestingTerm> extractInterestingTerms(List<RFTerm> RFTerms){
         List<InterestingTerm> terms = new ArrayList<InterestingTerm>();
-        List clauses = ((BooleanQuery)query).clauses();
-        for( Object o : clauses ) {
-            Query q = ((BooleanClause)o).getQuery();
+        for( RFTerm term : RFTerms) {
             InterestingTerm it = new InterestingTerm();
-            it.boost = q.getBoost();
-            if(q instanceof TermQuery) {
-                TermQuery tq = (TermQuery)q;
-                it.term = tq.getTerm();
-            }
-            else if(q instanceof PayloadTermQuery){
-                PayloadTermQuery ptq = (PayloadTermQuery)q;
-                it.term = ptq.getTerm();
-            }
+            it.term = term.getTerm();
+            it.boost = term.getFinalScore();
             terms.add(it);
         }
         Collections.sort(terms, InterestingTerm.BOOST_ORDER);
-
         return terms;
     }
 
     private void addInterestingTerms(SolrQueryResponse rsp, RFParams.TermStyle termStyle, RFResult RFResult) {
 
-        List<RFTerm> RFTerms = RFResult.RFTerms;
+        List<RFTerm> RFTerms = RFResult.getRFTerms();
         Collections.sort(RFTerms, RFTerm.FLD_BOOST_X_SCORE_ORDER);
 
         if( termStyle == RFParams.TermStyle.DETAILS ) {
-            List<InterestingTerm> interesting = extractInterestingTerms(RFResult.rawRFQuery);
+            List<InterestingTerm> interesting = extractInterestingTerms(RFResult.getRFTerms());
 
             int longest = 0;
             for( InterestingTerm t : interesting ) {
@@ -298,8 +284,8 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
             rsp.add( "facet_counts", null );
         }
         else {
-            SimpleFacets f = new SimpleFacets(req, rfDocs.docSet, params );
-            rsp.add( "facet_counts", f.getFacetCounts() );
+            FacetComponent fct = new FacetComponent();
+            rsp.add( "facet_counts", fct.getFacetCounts(new SimpleFacets(req, rfDocs.docSet, params )) );
         }
     }
 
@@ -326,10 +312,10 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
         if (dbg == true && RFResult != null) {
             try {
 
-                NamedList<String> it = getRfTermsForDebug(RFResult);
+                NamedList<String> it = getRFTermsForDebug(RFResult);
 
                 NamedList<Object> dbgInfo = new NamedList<Object>();
-                NamedList<Object> stdDbg = SolrPluginUtils.doStandardDebug(req, q, RFResult.getFinalQuery(), rfDocs.docList, dbgQuery, dbgResults);
+                NamedList<Object> stdDbg = SolrPluginUtils.doStandardDebug(req, q, RFResult.getQuery(), rfDocs.docList, dbgQuery, dbgResults);
                 if (null != dbgInfo) {
                     rsp.add("debug", dbgInfo);
                     dbgInfo.add( "RFTerms", it );
@@ -351,13 +337,13 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
         }
     }
 
-    private NamedList<String> getRfTermsForDebug(RFResult RFResult) {
+    private NamedList<String> getRFTermsForDebug(RFResult rfResult) {
         NamedList<String> it = new NamedList<String>();
-        if(RFResult == null){
+        if(rfResult == null){
             return it;
         }
 
-        List<RFTerm> RFTerms = RFResult.RFTerms;
+        List<RFTerm> RFTerms = rfResult.getRFTerms();
         Collections.sort(RFTerms);
         int longestWd = 0;
         int longestFieldName = 0;
@@ -403,29 +389,11 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
     @Override
     public String getVersion(){
 
-        if (version != null) return version;
-        Enumeration<URL> resources;
-        StringBuilder stringBuilder = new StringBuilder();
-        try {
-            resources = getClass().getClassLoader().getResources("META-INF/MANIFEST.MF");
-            while (resources.hasMoreElements()) {
-                URL url = resources.nextElement();
-                /* let's not read other jar's manifests */
-                if (!url.toString().contains("DiceRelevancyFeedback-1.0.jar")) continue;
-                InputStream reader = url.openStream();
-                while(reader.available() > 0) {
-                    char c = (char) reader.read();
-                    stringBuilder.append(c);
-                    /* skip lines that don't contain the built-date */
-                    if (stringBuilder.toString().contains(System.getProperty("line.separator")) &&
-                            !stringBuilder.toString().contains("Built-Date")) stringBuilder.setLength(0);
-                }
-            }
-        } catch (Exception e) {
-            return "Error reading manifest!";
+        if (version != null && version.length() > 0){
+            return version;
         }
-        version = stringBuilder.toString();
-        return stringBuilder.toString();
+        version = JarVersion.getVersion(log);
+        return version;
     };
 
 
@@ -436,4 +404,6 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
         }
         catch( MalformedURLException ex ) { return null; }
     }
+
+
 }

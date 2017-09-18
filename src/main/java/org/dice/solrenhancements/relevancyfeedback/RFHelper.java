@@ -35,10 +35,11 @@ public class RFHelper
 
     final SolrIndexSearcher searcher;
     final QParser qParser;
-    final RelevancyFeedback rf;
+    final RelevancyFeedback relevancyFeedback;
     final IndexReader reader;
     final SchemaField uniqueKeyField;
     final boolean needDocSet;
+
 
     public RFHelper(SolrParams params, SolrIndexSearcher searcher, SchemaField uniqueKeyField, QParser qParser )
     {
@@ -55,63 +56,64 @@ public class RFHelper
                     "RelevancyFeedback requires at least one similarity field: "+ RFParams.SIMILARITY_FIELDS );
         }
 
-        this.rf = new RelevancyFeedback( reader );
-        rf.setFieldNames(fields);
+        this.relevancyFeedback = new RelevancyFeedback( reader );
+        relevancyFeedback.setFieldNames(fields);
 
         final String flMustMatch = params.get(RFParams.FL_MUST_MATCH);
         if( flMustMatch != null && flMustMatch.trim().length() > 0 ) {
             String[] mustMatchFields = splitList.split(flMustMatch.trim());
-            rf.setMatchFieldNames(mustMatchFields);
+            relevancyFeedback.setMatchFieldNames(mustMatchFields);
         }
 
         final String flMustNOTMatch = params.get(RFParams.FL_MUST_NOT_MATCH);
         if( flMustNOTMatch != null && flMustNOTMatch.trim().length() > 0 ) {
             String[] differntMatchFields = splitList.split(flMustNOTMatch.trim());
-            rf.setDifferentFieldNames(differntMatchFields);
+            relevancyFeedback.setDifferentFieldNames(differntMatchFields);
         }
 
         String[] payloadFields = getFieldList(RFParams.PAYLOAD_FIELDS, params);
         if(payloadFields != null){
-            rf.setPayloadFields(payloadFields);
+            throw new RuntimeException("Payload fields are not currently supported");
+            //relevancyFeedback.setPayloadFields(payloadFields);
         }
-        rf.setAnalyzer( searcher.getSchema().getIndexAnalyzer() );
+        relevancyFeedback.setAnalyzer( searcher.getSchema().getIndexAnalyzer() );
 
         // configurable params
 
-        rf.setMm(                params.get(RFParams.MM,                       RelevancyFeedback.DEFAULT_MM));
-        rf.setMinTermFreq(       params.getInt(RFParams.MIN_TERM_FREQ,         RelevancyFeedback.DEFAULT_MIN_TERM_FREQ));
-        rf.setMinDocFreq(        params.getInt(RFParams.MIN_DOC_FREQ,          RelevancyFeedback.DEFAULT_MIN_DOC_FREQ));
-        rf.setMaxDocFreq(        params.getInt(RFParams.MAX_DOC_FREQ,          RelevancyFeedback.DEFAULT_MAX_DOC_FREQ));
-        rf.setMinWordLen(        params.getInt(RFParams.MIN_WORD_LEN,          RelevancyFeedback.DEFAULT_MIN_WORD_LENGTH));
-        rf.setMaxWordLen(        params.getInt(RFParams.MAX_WORD_LEN,          RelevancyFeedback.DEFAULT_MAX_WORD_LENGTH));
+        relevancyFeedback.setMm(                params.get(RFParams.MM,                       RelevancyFeedback.DEFAULT_MM));
+        relevancyFeedback.setMinTermFreq(       params.getInt(RFParams.MIN_TERM_FREQ,         RelevancyFeedback.DEFAULT_MIN_TERM_FREQ));
+        relevancyFeedback.setMinDocFreq(        params.getInt(RFParams.MIN_DOC_FREQ,          RelevancyFeedback.DEFAULT_MIN_DOC_FREQ));
+        relevancyFeedback.setMaxDocFreq(        params.getInt(RFParams.MAX_DOC_FREQ,          RelevancyFeedback.DEFAULT_MAX_DOC_FREQ));
+        relevancyFeedback.setMinWordLen(        params.getInt(RFParams.MIN_WORD_LEN,          RelevancyFeedback.DEFAULT_MIN_WORD_LENGTH));
+        relevancyFeedback.setMaxWordLen(        params.getInt(RFParams.MAX_WORD_LEN,          RelevancyFeedback.DEFAULT_MAX_WORD_LENGTH));
 
-        rf.setBoost(             params.getBool(RFParams.BOOST, true ) );
+        relevancyFeedback.setBoost(             params.getBool(RFParams.BOOST, true ) );
 
         // new parameters
-        rf.setBoostFn(params.get(RFParams.BOOST_FN));
-        rf.setNormalizeFieldBoosts(params.getBool(RFParams.NORMALIZE_FIELD_BOOSTS, RelevancyFeedback.DEFAULT_NORMALIZE_FIELD_BOOSTS));
+        relevancyFeedback.setBoostFn(params.get(RFParams.BOOST_FN));
+        relevancyFeedback.setNormalizeFieldBoosts(params.getBool(RFParams.NORMALIZE_FIELD_BOOSTS, RelevancyFeedback.DEFAULT_NORMALIZE_FIELD_BOOSTS));
         // new versions of previous parameters moved to the field level
-        rf.setMaxQueryTermsPerField(params.getInt(RFParams.MAX_QUERY_TERMS_PER_FIELD, RelevancyFeedback.DEFAULT_MAX_QUERY_TERMS_PER_FIELD));
-        rf.setMaxNumTokensParsedPerField(params.getInt(RFParams.MAX_NUM_TOKENS_PARSED_PER_FIELD, RelevancyFeedback.DEFAULT_MAX_NUM_TOKENS_PARSED_PER_FIELD));
-        rf.setLogTf(params.getBool(RFParams.IS_LOG_TF, RelevancyFeedback.DEFAULT_IS_LOG_TF));
+        relevancyFeedback.setMaxQueryTermsPerField(params.getInt(RFParams.MAX_QUERY_TERMS_PER_FIELD, RelevancyFeedback.DEFAULT_MAX_QUERY_TERMS_PER_FIELD));
+        relevancyFeedback.setMaxNumTokensParsedPerField(params.getInt(RFParams.MAX_NUM_TOKENS_PARSED_PER_FIELD, RelevancyFeedback.DEFAULT_MAX_NUM_TOKENS_PARSED_PER_FIELD));
+        relevancyFeedback.setLogTf(params.getBool(RFParams.IS_LOG_TF, RelevancyFeedback.DEFAULT_IS_LOG_TF));
 
-        rf.setBoostFields(SolrPluginUtils.parseFieldBoosts(params.getParams(RFParams.QF)));
-        rf.setStreamBoostFields(SolrPluginUtils.parseFieldBoosts(params.getParams(RFParams.STREAM_QF)));
+        relevancyFeedback.setBoostFields(SolrPluginUtils.parseFieldBoosts(params.getParams(RFParams.QF)));
+        relevancyFeedback.setStreamBoostFields(SolrPluginUtils.parseFieldBoosts(params.getParams(RFParams.STREAM_QF)));
 
         String streamHead = params.get(RFParams.STREAM_HEAD);
         if(streamHead != null) {
-            rf.setStreamHead(streamHead);
+            relevancyFeedback.setStreamHead(streamHead);
         }
 
         // Set stream fields
         String[] streamHeadFields = getFieldList(RFParams.STREAM_HEAD_FL, params);
         if(streamHeadFields != null){
-            rf.setStreamHeadfieldNames(streamHeadFields);
+            relevancyFeedback.setStreamHeadfieldNames(streamHeadFields);
         }
 
         String[] streamBodyFields = getFieldList(RFParams.STREAM_BODY_FL, params);
         if(streamBodyFields != null){
-            rf.setStreamBodyfieldNames(streamBodyFields);
+            relevancyFeedback.setStreamBodyfieldNames(streamBodyFields);
         }
     }
 
@@ -126,29 +128,13 @@ public class RFHelper
         return null;
     }
 
-    private Query rawRFQuery;
-    private Query boostedRFQuery;
-    private BooleanQuery realRFQuery;
-
-    public Query getRawRFQuery(){
-        return rawRFQuery;
-    }
-
-    public Query getBoostedRFQuery(){
-        return boostedRFQuery;
-    }
-
-    public Query getRealRFQuery(){
-        return realRFQuery;
-    }
-
     private Query getBoostedFunctionQuery(Query q) throws SyntaxError{
 
-        if (rf.getBoostFn() == null || rf.getBoostFn().trim().length() == 0) {
+        if (relevancyFeedback.getBoostFn() == null || relevancyFeedback.getBoostFn().trim().length() == 0) {
             return q;
         }
 
-        Query boost = this.qParser.subQuery(rf.getBoostFn(), FunctionQParserPlugin.NAME).getQuery();
+        Query boost = this.qParser.subQuery(relevancyFeedback.getBoostFn(), FunctionQParserPlugin.NAME).getQuery();
         ValueSource vs;
         if (boost instanceof FunctionQuery) {
             vs = ((FunctionQuery) boost).getValueSource();
@@ -160,7 +146,7 @@ public class RFHelper
 
     public RFResult getMatchesFromDocs(DocIterator iterator, int start, int rows, List<Query> filters, int flags, Sort lsort, Query userQuery) throws IOException, SyntaxError
     {
-        realRFQuery = new BooleanQuery();
+        BooleanQuery.Builder qryBuilder = new BooleanQuery.Builder();
         List<Integer> ids = new ArrayList<Integer>();
 
         while(iterator.hasNext()) {
@@ -170,32 +156,38 @@ public class RFHelper
 
             // add exclusion filters to prevent matching seed documents
             TermQuery tq = new TermQuery(new Term(uniqueKeyField.getName(), uniqueKeyField.getType().storedToIndexed(doc.getField(uniqueKeyField.getName()))));
-            realRFQuery.add(tq, BooleanClause.Occur.MUST_NOT);
+            qryBuilder.add(tq, BooleanClause.Occur.MUST_NOT);
         }
 
-        RFResult RFResult = rf.like(ids);
-        rawRFQuery = RFResult.rawRFQuery;
-        if(RFResult.getMustMatchQuery() != null){
-            filters.add(RFResult.getMustMatchQuery());
+        RFQuery RFQuery = relevancyFeedback.like(ids);
+
+        Query rawrfQuery = RFQuery.getOrQuery();
+
+        if(RFQuery.getMustMatchQuery() != null){
+            filters.add(RFQuery.getMustMatchQuery());
         }
-        if(RFResult.getMustNOTMatchQuery() != null){
-            filters.add(RFResult.getMustNOTMatchQuery());
+        if(RFQuery.getMustNOTMatchQuery() != null){
+            filters.add(RFQuery.getMustNOTMatchQuery());
         }
 
-        boostedRFQuery = getBoostedFunctionQuery(rawRFQuery);
-        realRFQuery.add(boostedRFQuery, BooleanClause.Occur.MUST);
+        Query boostedrfQuery = getBoostedFunctionQuery(rawrfQuery);
+        qryBuilder.add(boostedrfQuery, BooleanClause.Occur.MUST);
 
-        BooleanQuery finalQuery = null;
+        Query finalQuery = null;
 
         if(userQuery != null){
-            finalQuery = new BooleanQuery();
-            finalQuery.add(userQuery, BooleanClause.Occur.MUST);
-            finalQuery.add(realRFQuery, BooleanClause.Occur.SHOULD);
+            // set user query as a MUST clause, and tack on RF query as a boosted OR (should)
+            Query rfQuery = qryBuilder.build();
+
+            BooleanQuery.Builder personalizedQryBuilder = new BooleanQuery.Builder();
+            personalizedQryBuilder.add(userQuery, BooleanClause.Occur.MUST);
+            personalizedQryBuilder.add(rfQuery, BooleanClause.Occur.SHOULD);
+
+            finalQuery = personalizedQryBuilder.build();
         }
         else{
-            finalQuery = realRFQuery;
+            finalQuery = qryBuilder.build();
         }
-        RFResult.setFinalQuery(finalQuery);
 
         DocListAndSet results = new DocListAndSet();
         if (this.needDocSet) {
@@ -203,43 +195,45 @@ public class RFHelper
         } else {
             results.docList = searcher.getDocList(finalQuery, filters, lsort, start, rows, flags);
         }
-        RFResult.setDoclist(results);
-        return RFResult;
+
+        return new RFResult(RFQuery.getRFTerms(), finalQuery, results);
     }
 
 
     public RFResult getMatchesFromContentSteam(Reader reader, int start, int rows, List<Query> filters, int flags, Sort lsort, Query userQuery) throws IOException, SyntaxError
     {
-        RFResult RFResult = rf.like(reader);
-        rawRFQuery = RFResult.rawRFQuery;
+        RFQuery RFQuery = relevancyFeedback.like(reader);
+        Query rawRFQuery = RFQuery.getOrQuery();
 
-        boostedRFQuery = getBoostedFunctionQuery(rawRFQuery);
+        if(RFQuery.getMustMatchQuery() != null || RFQuery.getMustNOTMatchQuery() != null){
+            throw new RuntimeException(
+                    String.format("The %s and the %s parameters are not supported for content stream queries",
+                    RFParams.FL_MUST_MATCH, RFParams.FL_MUST_NOT_MATCH));
+        }
 
-        Query finalQuery = null;
+        Query boostedRFQuery = getBoostedFunctionQuery(rawRFQuery);
+        Query finalQuery = boostedRFQuery;
         if(userQuery != null){
-            BooleanQuery tmpQuery = new BooleanQuery();
-            tmpQuery .add(userQuery, BooleanClause.Occur.MUST);
-            tmpQuery .add(boostedRFQuery, BooleanClause.Occur.SHOULD);
-            finalQuery = tmpQuery;
+            // set user query as a MUST clause, and tack on RF query as a boosted OR (should)
+            BooleanQuery.Builder personalizedQryBuilder = new BooleanQuery.Builder();
+            personalizedQryBuilder.add(userQuery, BooleanClause.Occur.MUST);
+            personalizedQryBuilder.add(boostedRFQuery, BooleanClause.Occur.SHOULD);
+
+            finalQuery = personalizedQryBuilder.build();
         }
-        else{
-            finalQuery = boostedRFQuery;
-        }
-        RFResult.setFinalQuery(finalQuery);
 
         DocListAndSet results = new DocListAndSet();
         if (this.needDocSet) {
-            results =   searcher.getDocListAndSet( finalQuery, filters, lsort, start, rows, flags);
+            results =         searcher.getDocListAndSet(  finalQuery, filters, lsort, start, rows, flags);
         } else {
             results.docList = searcher.getDocList( finalQuery, filters, lsort, start, rows, flags);
         }
-        RFResult.setDoclist(results);
-        return RFResult;
+        return new RFResult(RFQuery.getRFTerms(), finalQuery, results);
     }
 
     public RelevancyFeedback getRelevancyFeedback()
     {
-        return rf;
+        return relevancyFeedback;
     }
 }
 

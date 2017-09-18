@@ -9,7 +9,6 @@ A pre-built jar file can be found in the ```./target``` folder. The project cont
 ## Supported Solr versions
 Current branch is compiled for Solr 5.4. I will be adding branches compiled against Solr 6 versions shortly. If there is a particular version of Solr you need this for, please create a GitHub issue and I'll see what I can do.
 To manually compile it for a later version, use maven to compile the plugins using the pom.xml file, and update the versions of the solr and lucene libraries in that file, and use maven to pull in those dependencies. Then fix any compilation errors. Later versions of solr (6.x) use query builders to build the boolean queries, which is likely what needs to be fixed to support 6.x.
-**Update** - see Solr 6.3 branch - work in progress
  
 ## Importing into SOLR
 Please see the official SOLR guidelines for registering plugins with solr. This basically involves simply dropping the jar file into one of the folders that Solr checks for class and jar files on core reload.  
@@ -83,10 +82,10 @@ An **example request handler configuration** for the solrconfig.xml is shown bel
             <str name="pf2">company_text^0.01 title^12 skill^4 description^0.6</str> 
             
             <!-- Content based recommendations settings (post a document to the endpoint in a POST request). The stream.body and stream.head are form parameters
-                             You can send them in a GET request, but a POST handles larger data. If you have really large documents, you will need to change the buffer settings
-                             so that the request doesn't blow the buffer limits in Solr or your web server.
-            -->
-                                                
+                 You can send them in a GET request, but a POST handles larger data. If you have really large documents, you will need to change the buffer settings
+                 so that the request doesn't blow the buffer limits in Solr or your web server.
+             -->
+            
             <!-- Fields used for processing documents posted to the stream.body and stream.head parameters in a POST call -->
             <str  name="stream.head.fl">title,title_syn</str>
             <str  name="stream.body.fl">extractSkills,extractTitles</str>
@@ -181,7 +180,7 @@ An **example request handler configuration** for the solrconfig.xml is shown bel
 # Unsupervised Feedback (Blind Feedback) Plugin
 An example request handler configuration for the solrconfig.xml is shown below, with comments outlining the main parameters:
 ```$xml
- <requestHandler name="/ufselect" class="org.dice.solrenhancements.unsupervisedfeedback.DiceUnsupervisedFeedbackHandler">
+ <requestHandler name="/ufselect" class="org.dice.solrenhancements.unsupervisedfeedback.UnsupervisedFeedbackHandler">
         <lst name="defaults">
             <str name="omitHeader">true</str>
             <str name="wt">json</str>

@@ -1,6 +1,7 @@
 package org.dice.solrenhancements.relevancyfeedback;
 
 import com.google.common.base.Strings;
+import org.apache.lucene.index.Term;
 
 import java.text.DecimalFormat;
 import java.util.Comparator;
@@ -12,34 +13,38 @@ public class RFTerm implements Comparable<RFTerm> {
 
     private final String word;
     private final String fieldName;
-    private final float score;
     private final float idf;
     private final int docFreq;
     private final float tf;
     private final float fieldBoost;
     private final float payload;
-
     private final static DecimalFormat format = new DecimalFormat("#0.00");
+
     private final static DecimalFormat intFormat = new DecimalFormat("##.##");
     private final boolean logTf;
+    private final boolean hasPayload;
+    private final boolean useBoost;
+
+    private float vectorLength = 1.0f;
 
     // non-payload
-    public RFTerm(String word, String fieldName, float score, float tf, float idf, int docFreq, boolean logTf, float fieldBoost){
-        this(word, fieldName, score, tf, idf, docFreq, logTf, fieldBoost, 1.0f);
+    public RFTerm(String word, String fieldName, float tf, float idf, int docFreq, boolean logTf, float fieldBoost, boolean useBoost){
+        this(word, fieldName, tf, idf, docFreq, logTf, fieldBoost, 1.0f, useBoost, false);
     }
 
     // with payload
-    public RFTerm(String word, String fieldName, float score, float tf, float idf, int docFreq, boolean logTf, float fieldBoost, float payload){
+    public RFTerm(String word, String fieldName, float tf, float idf, int docFreq, boolean logTf, float fieldBoost, float payload, boolean useBoost, boolean hasPayload){
 
         this.word = word;
         this.fieldName = fieldName;
-        this.score = score;
         this.idf = idf;
         this.docFreq = docFreq;
         this.tf = tf;
         this.fieldBoost = fieldBoost;
         this.payload = payload;
         this.logTf = logTf;
+        this.useBoost = useBoost;
+        this.hasPayload = hasPayload;
     }
 
     public String getWord() {
@@ -48,10 +53,6 @@ public class RFTerm implements Comparable<RFTerm> {
 
     public String getFieldName() {
         return fieldName;
-    }
-
-    public float getScore() {
-        return score;
     }
 
     public float getIdf() {
@@ -82,31 +83,62 @@ public class RFTerm implements Comparable<RFTerm> {
         return Strings.padStart(formatted, 5, ' ');
     }
 
-    private float getBoostedScore(){
-        return this.getFieldBoost() * this.getScore();
+    public float getTermWeight(){
+        if(this.hasPayload()){
+            // for the payload, typically we want to include the TF but not the IDF. This is what is passed to the payload value
+            return this.getPayload();
+        }
+        else {
+            if(false == this.useBoost){
+                return 1.0f;
+            }
+            float tfVal = this.tf;
+            if (this.logTf) {
+                tfVal = getLogTf();
+            }
+            return tfVal * this.idf;
+        }
+    }
+
+    public float getNormalizedTermWeight(){
+        return this.getTermWeight() / this.vectorLength;
+    }
+
+    private float getLogTf() {
+        return (float) Math.log(this.tf + 1.0d);
+    }
+
+    public float getFinalScore(){
+        return this.getFieldBoost() * this.getNormalizedTermWeight();
     }
 
     public String valuesToString(){
         StringBuilder sb = new StringBuilder();
-        sb.append("bstd score: ").append(padFloat(this.getBoostedScore()));
-        sb.append(" score: ").append(padFloat(this.getScore()));
-        if(this.logTf){
-            sb.append(" log(tf): ").append(padFloat(this.getTf()));
+        sb.append("score: ").append(padFloat(this.getFinalScore()));
+        sb.append(" term wt: ").append(padFloat(this.getTermWeight()));
+
+        if(this.useBoost) {
+            if (this.logTf) {
+                sb.append(" log(tf): ").append(padFloat(this.getLogTf()));
+            } else {
+                sb.append(" tf: ").append(padInt(this.getTf()));
+            }
+            sb.append(" df: ").append(padInt((this.getDocFreq())));
+            sb.append(" idf: ").append(padFloat((this.getIdf())));
         }
-        else {
-            sb.append(" tf: ").append(padInt(this.getTf()));
+        if(this.hasPayload())
+        {
+            sb.append(" pyld: ").append(padFloat((this.getPayload())));
         }
-        sb.append(" df: ").append(padInt((this.getDocFreq())));
-        sb.append(" idf: ").append(padFloat((this.getIdf())));
-        sb.append(" pyld: ").append(padFloat((this.getPayload())));
         sb.append(" fldBst: ").append(padFloat((this.getFieldBoost())));
+        sb.append(" veclen: ").append(padFloat((this.vectorLength)));
         return sb.toString();
     }
 
     public static Comparator<RFTerm> FLD_BOOST_X_SCORE_ORDER = new Comparator<RFTerm>() {
         @Override
         public int compare(RFTerm t1, RFTerm t2) {
-            float d = t2.getScore() - t1.getScore();
+            float d = t2.getFinalScore() - t1.getFinalScore();
             if( d == 0 ) {
                 return 0;
             }
@@ -115,6 +147,19 @@ public class RFTerm implements Comparable<RFTerm> {
     };
 
     public int compareTo(RFTerm o) {
-        return ((Float)o.getBoostedScore()).compareTo(this.getBoostedScore());
+        return ((Float)o.getFinalScore()).compareTo(this.getFinalScore());
+    }
+
+    // used in debug info (relevancyFeedback.interestingTerms = details)
+    public Term getTerm() {
+        return new Term(this.getFieldName(), this.getWord());
+    }
+
+    public boolean hasPayload() {
+        return hasPayload;
+    }
+
+    public void setVectorLength(float vectorLength) {
+        this.vectorLength = vectorLength;
     }
 }
