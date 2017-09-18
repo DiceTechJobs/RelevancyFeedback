@@ -85,9 +85,9 @@ import java.util.*;
  * IndexReader ir = ...
  * IndexSearcher is = ...
  * <p/>
- * RelevancyFeedback mlt = new RelevancyFeedback(ir);
+ * RelevancyFeedback relevancyFeedback = new RelevancyFeedback(ir);
  * Reader target = ... // orig source of doc you want to find similarities to
- * Query query = mlt.queryFromDocuments( target);
+ * Query query = relevancyFeedback.queryFromDocuments( target);
  * <p/>
  * Hits hits = is.search(query);
  * // now the usual iteration thru 'hits' - the only thing to watch for is to make sure
@@ -338,7 +338,7 @@ public final class RelevancyFeedback {
 
 
     /**
-     * Gets the value of the mlt.mm parameter (mm for the MLT query)
+     * Gets the value of the relevancyFeedback.mm parameter (mm for the MLT query)
      *
      * @return - the minimum should match parameter string - follows the normal mm syntax
      * @see #setMm(String)
@@ -348,7 +348,7 @@ public final class RelevancyFeedback {
     }
 
     /**
-     * Sets the text for the mlt.mm parameter (mm for the MLT query)
+     * Sets the text for the relevancyFeedback.mm parameter (mm for the MLT query)
      *
      * @param mm - minimum should match parameter string - follows the normal mm syntax
      * @see #getMm()

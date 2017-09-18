@@ -79,24 +79,31 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
             flags |= SolrIndexSearcher.GET_SCORES;
         }
         // note: set in configureSolrParameters
-        String defType = params.get(QueryParsing.DEFTYPE, EDISMAX);
-        String q = params.get( CommonParams.Q );
-        Query query = null;
+        String userQdefType = params.get(QueryParsing.DEFTYPE, EDISMAX);
+        String rfDefType = params.get(RFParams.RF_DEFTYPE, EDISMAX);
+
+        String userQ = params.get( CommonParams.Q );
+        String rfQ = params.get(RFParams.RF_QUERY);
+
+        Query rfQuery = null;
+        Query userQuery = null;
+
         SortSpec sortSpec = null;
-        QParser parser = null;
+        QParser rfQueryParser = null;
+        QParser userQueryParser = null;
 
         List<Query> targetFqFilters = null;
         List<Query> rfFqFilters    = null;
 
         try {
-            if (q != null) {
-                parser = QParser.getParser(q, defType, req);
-                query = parser.getQuery();
-                sortSpec = parser.getSort(true);
+            if (rfQ != null) {
+                rfQueryParser = QParser.getParser(rfQ, rfDefType, req);
+                rfQuery = rfQueryParser.getQuery();
+                sortSpec = rfQueryParser.getSort(true);
             }
             else{
-                parser = QParser.getParser(null, defType, req);
-                sortSpec = parser.getSort(true);
+                rfQueryParser = QParser.getParser(null, rfDefType, req);
+                sortSpec = rfQueryParser.getSort(true);
             }
 
             targetFqFilters = getFilters(req, CommonParams.FQ);
@@ -105,13 +112,23 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
             throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, e);
         }
 
-        RFHelper mlt = new RFHelper( params, searcher, uniqueKeyField, parser );
+        try {
+            if (userQ != null) {
+                userQueryParser = QParser.getParser(userQ, userQdefType, req);
+                userQuery = userQueryParser.getQuery();
+            }
+
+        } catch (SyntaxError e) {
+            throw new SolrException(SolrException.ErrorCode.BAD_REQUEST, e);
+        }
+
+        RFHelper rfhelper = new RFHelper( params, searcher, uniqueKeyField, rfQueryParser );
 
         // Hold on to the interesting terms if relevant
         RFParams.TermStyle termStyle = RFParams.TermStyle.get(params.get(RFParams.INTERESTING_TERMS));
 
         RFResult RFResult = null;
-        DocListAndSet mltDocs = null;
+        DocListAndSet rfDocs = null;
 
         // Parse Required Params
         // This will either have a single Reader or valid query
@@ -121,26 +138,26 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
             int rows  = params.getInt(CommonParams.ROWS, 10);
 
             // for use when passed a content stream
-            if (q == null || q.trim().length() < 1) {
+            if (rfQ == null || rfQ.trim().length() < 1) {
                 reader = getContentStreamReader(req, reader);
-                q = "NULL - from content stream";
             }
             // Find documents RelevancyFeedback - either with a reader or a query
             // --------------------------------------------------------------------------------
             if (reader != null) {
                 // this will only be initialized if used with a content stream (see above)
-                RFResult = mlt.getMoreLikeThisFromContentSteam(reader, start, rows, rfFqFilters, flags, sortSpec.getSort());
-            } else if (q != null) {
+                rfQ = "NULL - from content stream";
+                RFResult = rfhelper.getMatchesFromContentSteam(reader, start, rows, rfFqFilters, flags, sortSpec.getSort(), userQuery);
+            } else if (rfQ != null) {
                 // Matching options
-                RFResult = getMoreLikeTheseFromQuery(rsp, params, flags, q, query, sortSpec,
-                        targetFqFilters, rfFqFilters, searcher, mlt,  start, rows);
+                RFResult = getMatchesFromQuery(rsp, params, flags, rfQ, rfQuery, userQuery, sortSpec,
+                        targetFqFilters, rfFqFilters, searcher, rfhelper,  start, rows);
             } else {
                 throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
-                        "RelevancyFeedback requires either a query (?q=) or text to find similar documents.");
+                        "RelevancyFeedback requires either a query (?rf.q=) or text (using stream.head and stream.body fields in a POST) to find similar documents.");
             }
             if(RFResult != null)
             {
-                mltDocs = RFResult.getResults();
+                rfDocs = RFResult.getResults();
             }
 
         } finally {
@@ -149,10 +166,13 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
             }
         }
 
-        if( mltDocs == null ) {
-            mltDocs = new DocListAndSet(); // avoid NPE
+        if( rfDocs == null ) {
+            rfDocs = new DocListAndSet(); // avoid NPE
         }
-        rsp.add( "response", mltDocs.docList );
+        rsp.add( "response", rfDocs.docList );
+        if(RFResult != null && RFResult.getQuery() != null) {
+            rsp.add(RFParams.PREFIX + "query:", RFResult.getQuery().toString());
+        }
 
         if( RFResult != null && termStyle != RFParams.TermStyle.NONE) {
             addInterestingTerms(rsp, termStyle, RFResult);
@@ -160,10 +180,10 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
 
         // maybe facet the results
         if (params.getBool(FacetParams.FACET,false)) {
-            addFacet(req, rsp, params, mltDocs);
+            addFacet(req, rsp, params, rfDocs);
         }
 
-        addDebugInfo(req, rsp, q, rfFqFilters, RFResult);
+        addDebugInfo(req, rsp, rfQ, rfFqFilters, rfhelper, RFResult, rfDocs);
     }
 
     private void configureSolrParameters(SolrQueryRequest req, ModifiableSolrParams params, String uniqueKeyField){
@@ -195,13 +215,13 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
         return reader;
     }
 
-    private RFResult getMoreLikeTheseFromQuery(SolrQueryResponse rsp, SolrParams params, int flags, String q, Query query, SortSpec sortSpec, List<Query> targetFqFilters, List<Query> mltFqFilters, SolrIndexSearcher searcher, RFHelper mlt, int start, int rows) throws IOException, SyntaxError {
+    private RFResult getMatchesFromQuery(SolrQueryResponse rsp, SolrParams params, int flags, String q, Query query, Query userQuery, SortSpec sortSpec, List<Query> targetFqFilters, List<Query> rfFqFilters, SolrIndexSearcher searcher, RFHelper rfHelper, int start, int rows) throws IOException, SyntaxError {
 
         boolean includeMatch = params.getBool(RFParams.MATCH_INCLUDE, true);
         int matchOffset = params.getInt(RFParams.MATCH_OFFSET, 0);
         // Find the base match
         DocList match = searcher.getDocList(query, targetFqFilters, null, matchOffset, 10000, flags); // only get the first one...
-        if(match.matches() == 0){
+        if(match.matches() == 0 && userQuery == null){
             throw new SolrException(SolrException.ErrorCode.BAD_REQUEST,
                     String.format("RelevancyFeedback was unable to find any documents matching the query: '%s'.", q));
         }
@@ -212,9 +232,9 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
 
         // This is an iterator, but we only handle the first match
         DocIterator iterator = match.iterator();
-        if (iterator.hasNext()) {
+        if (iterator.hasNext() || userQuery != null) {
             // do a RelevancyFeedback query for each document in results
-            return mlt.getMoreLikeTheseFromDocs(iterator, start, rows, mltFqFilters, flags, sortSpec.getSort());
+            return rfHelper.getMatchesFromDocs(iterator, start, rows, rfFqFilters, flags, sortSpec.getSort(), userQuery);
         }
         return null;
     }
@@ -269,8 +289,7 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
         }
     }
 
-    private void addDebugInfo(SolrQueryRequest req, SolrQueryResponse rsp, String q, List<Query> mltFqFilters, RFResult RFResult) {
-        DocListAndSet mltDocs = RFResult.getResults();
+    private void addDebugInfo(SolrQueryRequest req, SolrQueryResponse rsp, String q, List<Query> rfFqFilters, RFHelper rfHelper, RFResult RFResult, DocListAndSet rfDocs) {
 
         boolean dbg = req.getParams().getBool(CommonParams.DEBUG_QUERY, false);
         boolean dbgQuery = false, dbgResults = false;
@@ -290,22 +309,22 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
             dbgResults = true;
         }
         // Copied from StandardRequestHandler... perhaps it should be added to doStandardDebug?
-        if (dbg == true) {
+        if (dbg == true && RFResult != null) {
             try {
 
-                NamedList<String> it = getMltTermsForDebug(RFResult.getRFTerms());
+                NamedList<String> it = getRFTermsForDebug(RFResult);
 
                 NamedList<Object> dbgInfo = new NamedList<Object>();
-                NamedList<Object> stdDbg = SolrPluginUtils.doStandardDebug(req, q, RFResult.getQuery(), mltDocs.docList, dbgQuery, dbgResults);
+                NamedList<Object> stdDbg = SolrPluginUtils.doStandardDebug(req, q, RFResult.getQuery(), rfDocs.docList, dbgQuery, dbgResults);
                 if (null != dbgInfo) {
                     rsp.add("debug", dbgInfo);
-                    dbgInfo.add( "rfTerms", it );
+                    dbgInfo.add( "RFTerms", it );
                     dbgInfo.addAll(stdDbg);
 
-                    if (null != mltFqFilters) {
+                    if (null != rfFqFilters) {
                         dbgInfo.add("filter_queries",req.getParams().getParams(CommonParams.FQ));
-                        List<String> fqs = new ArrayList<String>(mltFqFilters.size());
-                        for (Query fq : mltFqFilters) {
+                        List<String> fqs = new ArrayList<String>(rfFqFilters.size());
+                        for (Query fq : rfFqFilters) {
                             fqs.add(QueryParsing.toString(fq, req.getSchema()));
                         }
                         dbgInfo.add("rf_filter_queries",fqs);
@@ -318,9 +337,14 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
         }
     }
 
-    private NamedList<String> getMltTermsForDebug(List<RFTerm> RFTerms) {
-        Collections.sort(RFTerms);
+    private NamedList<String> getRFTermsForDebug(RFResult rfResult) {
         NamedList<String> it = new NamedList<String>();
+        if(rfResult == null){
+            return it;
+        }
+
+        List<RFTerm> RFTerms = rfResult.getRFTerms();
+        Collections.sort(RFTerms);
         int longestWd = 0;
         int longestFieldName = 0;
         for( RFTerm RFTerm : RFTerms) {

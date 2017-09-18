@@ -150,7 +150,7 @@ public class RFTerm implements Comparable<RFTerm> {
         return ((Float)o.getFinalScore()).compareTo(this.getFinalScore());
     }
 
-    // used in debug info (mlt.interestingTerms = details)
+    // used in debug info (relevancyFeedback.interestingTerms = details)
     public Term getTerm() {
         return new Term(this.getFieldName(), this.getWord());
     }

@@ -35,7 +35,7 @@ public class RFHelper
 
     final SolrIndexSearcher searcher;
     final QParser qParser;
-    final RelevancyFeedback mlt;
+    final RelevancyFeedback relevancyFeedback;
     final IndexReader reader;
     final SchemaField uniqueKeyField;
     final boolean needDocSet;
@@ -56,64 +56,64 @@ public class RFHelper
                     "RelevancyFeedback requires at least one similarity field: "+ RFParams.SIMILARITY_FIELDS );
         }
 
-        this.mlt = new RelevancyFeedback( reader );
-        mlt.setFieldNames(fields);
+        this.relevancyFeedback = new RelevancyFeedback( reader );
+        relevancyFeedback.setFieldNames(fields);
 
         final String flMustMatch = params.get(RFParams.FL_MUST_MATCH);
         if( flMustMatch != null && flMustMatch.trim().length() > 0 ) {
             String[] mustMatchFields = splitList.split(flMustMatch.trim());
-            mlt.setMatchFieldNames(mustMatchFields);
+            relevancyFeedback.setMatchFieldNames(mustMatchFields);
         }
 
         final String flMustNOTMatch = params.get(RFParams.FL_MUST_NOT_MATCH);
         if( flMustNOTMatch != null && flMustNOTMatch.trim().length() > 0 ) {
             String[] differntMatchFields = splitList.split(flMustNOTMatch.trim());
-            mlt.setDifferentFieldNames(differntMatchFields);
+            relevancyFeedback.setDifferentFieldNames(differntMatchFields);
         }
 
         String[] payloadFields = getFieldList(RFParams.PAYLOAD_FIELDS, params);
         if(payloadFields != null){
             throw new RuntimeException("Payload fields are not currently supported");
-            //mlt.setPayloadFields(payloadFields);
+            //relevancyFeedback.setPayloadFields(payloadFields);
         }
-        mlt.setAnalyzer( searcher.getSchema().getIndexAnalyzer() );
+        relevancyFeedback.setAnalyzer( searcher.getSchema().getIndexAnalyzer() );
 
         // configurable params
 
-        mlt.setMm(                params.get(RFParams.MM,                       RelevancyFeedback.DEFAULT_MM));
-        mlt.setMinTermFreq(       params.getInt(RFParams.MIN_TERM_FREQ,         RelevancyFeedback.DEFAULT_MIN_TERM_FREQ));
-        mlt.setMinDocFreq(        params.getInt(RFParams.MIN_DOC_FREQ,          RelevancyFeedback.DEFAULT_MIN_DOC_FREQ));
-        mlt.setMaxDocFreq(        params.getInt(RFParams.MAX_DOC_FREQ,          RelevancyFeedback.DEFAULT_MAX_DOC_FREQ));
-        mlt.setMinWordLen(        params.getInt(RFParams.MIN_WORD_LEN,          RelevancyFeedback.DEFAULT_MIN_WORD_LENGTH));
-        mlt.setMaxWordLen(        params.getInt(RFParams.MAX_WORD_LEN,          RelevancyFeedback.DEFAULT_MAX_WORD_LENGTH));
+        relevancyFeedback.setMm(                params.get(RFParams.MM,                       RelevancyFeedback.DEFAULT_MM));
+        relevancyFeedback.setMinTermFreq(       params.getInt(RFParams.MIN_TERM_FREQ,         RelevancyFeedback.DEFAULT_MIN_TERM_FREQ));
+        relevancyFeedback.setMinDocFreq(        params.getInt(RFParams.MIN_DOC_FREQ,          RelevancyFeedback.DEFAULT_MIN_DOC_FREQ));
+        relevancyFeedback.setMaxDocFreq(        params.getInt(RFParams.MAX_DOC_FREQ,          RelevancyFeedback.DEFAULT_MAX_DOC_FREQ));
+        relevancyFeedback.setMinWordLen(        params.getInt(RFParams.MIN_WORD_LEN,          RelevancyFeedback.DEFAULT_MIN_WORD_LENGTH));
+        relevancyFeedback.setMaxWordLen(        params.getInt(RFParams.MAX_WORD_LEN,          RelevancyFeedback.DEFAULT_MAX_WORD_LENGTH));
 
-        mlt.setBoost(             params.getBool(RFParams.BOOST, true ) );
+        relevancyFeedback.setBoost(             params.getBool(RFParams.BOOST, true ) );
 
         // new parameters
-        mlt.setBoostFn(params.get(RFParams.BOOST_FN));
-        mlt.setNormalizeFieldBoosts(params.getBool(RFParams.NORMALIZE_FIELD_BOOSTS, RelevancyFeedback.DEFAULT_NORMALIZE_FIELD_BOOSTS));
+        relevancyFeedback.setBoostFn(params.get(RFParams.BOOST_FN));
+        relevancyFeedback.setNormalizeFieldBoosts(params.getBool(RFParams.NORMALIZE_FIELD_BOOSTS, RelevancyFeedback.DEFAULT_NORMALIZE_FIELD_BOOSTS));
         // new versions of previous parameters moved to the field level
-        mlt.setMaxQueryTermsPerField(params.getInt(RFParams.MAX_QUERY_TERMS_PER_FIELD, RelevancyFeedback.DEFAULT_MAX_QUERY_TERMS_PER_FIELD));
-        mlt.setMaxNumTokensParsedPerField(params.getInt(RFParams.MAX_NUM_TOKENS_PARSED_PER_FIELD, RelevancyFeedback.DEFAULT_MAX_NUM_TOKENS_PARSED_PER_FIELD));
-        mlt.setLogTf(params.getBool(RFParams.IS_LOG_TF, RelevancyFeedback.DEFAULT_IS_LOG_TF));
+        relevancyFeedback.setMaxQueryTermsPerField(params.getInt(RFParams.MAX_QUERY_TERMS_PER_FIELD, RelevancyFeedback.DEFAULT_MAX_QUERY_TERMS_PER_FIELD));
+        relevancyFeedback.setMaxNumTokensParsedPerField(params.getInt(RFParams.MAX_NUM_TOKENS_PARSED_PER_FIELD, RelevancyFeedback.DEFAULT_MAX_NUM_TOKENS_PARSED_PER_FIELD));
+        relevancyFeedback.setLogTf(params.getBool(RFParams.IS_LOG_TF, RelevancyFeedback.DEFAULT_IS_LOG_TF));
 
-        mlt.setBoostFields(SolrPluginUtils.parseFieldBoosts(params.getParams(RFParams.QF)));
-        mlt.setStreamBoostFields(SolrPluginUtils.parseFieldBoosts(params.getParams(RFParams.STREAM_QF)));
+        relevancyFeedback.setBoostFields(SolrPluginUtils.parseFieldBoosts(params.getParams(RFParams.QF)));
+        relevancyFeedback.setStreamBoostFields(SolrPluginUtils.parseFieldBoosts(params.getParams(RFParams.STREAM_QF)));
 
         String streamHead = params.get(RFParams.STREAM_HEAD);
         if(streamHead != null) {
-            mlt.setStreamHead(streamHead);
+            relevancyFeedback.setStreamHead(streamHead);
         }
 
         // Set stream fields
         String[] streamHeadFields = getFieldList(RFParams.STREAM_HEAD_FL, params);
         if(streamHeadFields != null){
-            mlt.setStreamHeadfieldNames(streamHeadFields);
+            relevancyFeedback.setStreamHeadfieldNames(streamHeadFields);
         }
 
         String[] streamBodyFields = getFieldList(RFParams.STREAM_BODY_FL, params);
         if(streamBodyFields != null){
-            mlt.setStreamBodyfieldNames(streamBodyFields);
+            relevancyFeedback.setStreamBodyfieldNames(streamBodyFields);
         }
     }
 
@@ -130,11 +130,11 @@ public class RFHelper
 
     private Query getBoostedFunctionQuery(Query q) throws SyntaxError{
 
-        if (mlt.getBoostFn() == null || mlt.getBoostFn().trim().length() == 0) {
+        if (relevancyFeedback.getBoostFn() == null || relevancyFeedback.getBoostFn().trim().length() == 0) {
             return q;
         }
 
-        Query boost = this.qParser.subQuery(mlt.getBoostFn(), FunctionQParserPlugin.NAME).getQuery();
+        Query boost = this.qParser.subQuery(relevancyFeedback.getBoostFn(), FunctionQParserPlugin.NAME).getQuery();
         ValueSource vs;
         if (boost instanceof FunctionQuery) {
             vs = ((FunctionQuery) boost).getValueSource();
@@ -144,7 +144,7 @@ public class RFHelper
         return new BoostedQuery(q, vs);
     }
 
-    public RFResult getMoreLikeTheseFromDocs(DocIterator iterator, int start, int rows, List<Query> filters, int flags, Sort lsort) throws IOException, SyntaxError
+    public RFResult getMatchesFromDocs(DocIterator iterator, int start, int rows, List<Query> filters, int flags, Sort lsort, Query userQuery) throws IOException, SyntaxError
     {
         BooleanQuery.Builder qryBuilder = new BooleanQuery.Builder();
         List<Integer> ids = new ArrayList<Integer>();
@@ -159,7 +159,7 @@ public class RFHelper
             qryBuilder.add(tq, BooleanClause.Occur.MUST_NOT);
         }
 
-        RFQuery RFQuery = mlt.like(ids);
+        RFQuery RFQuery = relevancyFeedback.like(ids);
 
         Query rawMLTQuery = RFQuery.getOrQuery();
 
@@ -172,23 +172,38 @@ public class RFHelper
 
         Query boostedMLTQuery = getBoostedFunctionQuery(rawMLTQuery);
         qryBuilder.add(boostedMLTQuery, BooleanClause.Occur.MUST);
-        Query finalMLTQuery = qryBuilder.build();
+
+        Query finalQuery = null;
+
+        if(userQuery != null){
+            // set user query as a MUST clause, and tack on RF query as a boosted OR (should)
+            Query rfQuery = qryBuilder.build();
+
+            BooleanQuery.Builder personalizedQryBuilder = new BooleanQuery.Builder();
+            personalizedQryBuilder.add(userQuery, BooleanClause.Occur.MUST);
+            personalizedQryBuilder.add(rfQuery, BooleanClause.Occur.SHOULD);
+
+            finalQuery = personalizedQryBuilder.build();
+        }
+        else{
+            finalQuery = qryBuilder.build();
+        }
 
         DocListAndSet results = new DocListAndSet();
         if (this.needDocSet) {
-            results = searcher.getDocListAndSet(finalMLTQuery, filters, lsort, start, rows, flags);
+            results = searcher.getDocListAndSet(finalQuery, filters, lsort, start, rows, flags);
         } else {
-            results.docList = searcher.getDocList(finalMLTQuery, filters, lsort, start, rows, flags);
+            results.docList = searcher.getDocList(finalQuery, filters, lsort, start, rows, flags);
         }
 
-        return new RFResult(RFQuery.getRFTerms(), finalMLTQuery, results);
+        return new RFResult(RFQuery.getRFTerms(), finalQuery, results);
     }
 
 
-    public RFResult getMoreLikeThisFromContentSteam(Reader reader, int start, int rows, List<Query> filters, int flags, Sort lsort) throws IOException, SyntaxError
+    public RFResult getMatchesFromContentSteam(Reader reader, int start, int rows, List<Query> filters, int flags, Sort lsort, Query userQuery) throws IOException, SyntaxError
     {
-        RFQuery RFQuery = mlt.like(reader);
-        Query rawMLTQuery = RFQuery.getOrQuery();
+        RFQuery RFQuery = relevancyFeedback.like(reader);
+        Query rawRFQuery = RFQuery.getOrQuery();
 
         if(RFQuery.getMustMatchQuery() != null || RFQuery.getMustNOTMatchQuery() != null){
             throw new RuntimeException(
@@ -196,19 +211,29 @@ public class RFHelper
                     RFParams.FL_MUST_MATCH, RFParams.FL_MUST_NOT_MATCH));
         }
 
-        Query boostedMLTQuery = getBoostedFunctionQuery( rawMLTQuery );
+        Query boostedRFQuery = getBoostedFunctionQuery(rawRFQuery);
+        Query finalQuery = boostedRFQuery;
+        if(userQuery != null){
+            // set user query as a MUST clause, and tack on RF query as a boosted OR (should)
+            BooleanQuery.Builder personalizedQryBuilder = new BooleanQuery.Builder();
+            personalizedQryBuilder.add(userQuery, BooleanClause.Occur.MUST);
+            personalizedQryBuilder.add(boostedRFQuery, BooleanClause.Occur.SHOULD);
+
+            finalQuery = personalizedQryBuilder.build();
+        }
+
         DocListAndSet results = new DocListAndSet();
         if (this.needDocSet) {
-            results =         searcher.getDocListAndSet(  boostedMLTQuery, filters, lsort, start, rows, flags);
+            results =         searcher.getDocListAndSet(  finalQuery, filters, lsort, start, rows, flags);
         } else {
-            results.docList = searcher.getDocList( boostedMLTQuery, filters, lsort, start, rows, flags);
+            results.docList = searcher.getDocList( finalQuery, filters, lsort, start, rows, flags);
         }
-        return new RFResult(RFQuery.getRFTerms(), boostedMLTQuery, results);
+        return new RFResult(RFQuery.getRFTerms(), finalQuery, results);
     }
 
-    public RelevancyFeedback getMoreLikeThis()
+    public RelevancyFeedback getRelevancyFeedback()
     {
-        return mlt;
+        return relevancyFeedback;
     }
 }
 
