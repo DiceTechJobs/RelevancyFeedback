@@ -1,4 +1,4 @@
-package org.dice.solrenhancements.unsupervisedfeedback;
+package org.dice.solrenhancements.morelikethis;
 
 import org.apache.lucene.index.Term;
 

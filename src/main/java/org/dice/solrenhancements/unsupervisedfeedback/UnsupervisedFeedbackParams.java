@@ -7,7 +7,7 @@ import java.util.Locale;
  */
 public interface UnsupervisedFeedbackParams {
 
-    String PREFIX = "uf.";
+    String PREFIX = "moreLikeThis.";
 
     String SIMILARITY_FIELDS = PREFIX + "fl";
     String MIN_TERM_FREQ = PREFIX + "mintf";
