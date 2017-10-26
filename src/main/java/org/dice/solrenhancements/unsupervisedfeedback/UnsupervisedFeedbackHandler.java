@@ -143,7 +143,7 @@ public class UnsupervisedFeedbackHandler extends RequestHandlerBase
         if( usfdbkResult != null ) {
             results = usfdbkResult.getResults();
         }
-        rsp.add( "response", results );
+        rsp.add( "response", results.docList );
 
         if( usfdbkResult!= null && termStyle != UnsupervisedFeedbackParams.TermStyle.NONE) {
             addInterestingTerms(rsp, termStyle, usfdbkResult);
