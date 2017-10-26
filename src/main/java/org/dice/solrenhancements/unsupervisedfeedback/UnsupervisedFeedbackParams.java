@@ -15,6 +15,8 @@ public interface UnsupervisedFeedbackParams {
     String MIN_DOC_FREQ  = PREFIX + "mindf";
     String MIN_WORD_LEN  = PREFIX + "minwl";
     String MAX_WORD_LEN  = PREFIX + "maxwl";
+    // don't clash with regular mm
+    java.lang.String MM = PREFIX + "mm";
     //Changed from maxqt
     String MAX_QUERY_TERMS_PER_FIELD = PREFIX + "maxflqt";
     //Changed from maxntp

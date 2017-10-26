@@ -68,6 +68,7 @@ public class UnsupervisedFeedbackHelper
 
         // configurable params
 
+        relevancyFeedback.setMm(params.get(UnsupervisedFeedbackParams.MM, RelevancyFeedback.DEFAULT_MM));
         relevancyFeedback.setMinTermFreq(params.getInt(UnsupervisedFeedbackParams.MIN_TERM_FREQ, RelevancyFeedback.DEFAULT_MIN_TERM_FREQ));
         relevancyFeedback.setMinDocFreq(params.getInt(UnsupervisedFeedbackParams.MIN_DOC_FREQ, RelevancyFeedback.DEFAULT_MIN_DOC_FREQ));
         relevancyFeedback.setMaxDocFreq(params.getInt(UnsupervisedFeedbackParams.MAX_DOC_FREQ, RelevancyFeedback.DEFAULT_MAX_DOC_FREQ));
