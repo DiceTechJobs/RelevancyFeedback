@@ -9,6 +9,7 @@ A pre-built jar file can be found in the ```./target``` folder. The project cont
 ## Supported Solr versions
 - Solr 5.4 (see branch)
 - Solr 6.3 (see branch) **also master**
+- Solr 7.0 (see branch) - also works in 7.1
 
 If there is a particular version of Solr you need this for, please create a GitHub issue and I'll see what I can do.
 To manually compile it for a specific version, use maven to compile the plugins using the pom.xml file, and update the versions of the solr and lucene libraries in that file, and use maven to pull in those dependencies. Then fix any compilation errors.
