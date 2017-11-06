@@ -99,11 +99,11 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
             if (rfQ != null) {
                 rfQueryParser = QParser.getParser(rfQ, rfDefType, req);
                 rfQuery = rfQueryParser.getQuery();
-                sortSpec = rfQueryParser.getSort(true);
+                sortSpec = rfQueryParser.getSortSpec(true);
             }
             else{
                 rfQueryParser = QParser.getParser(null, rfDefType, req);
-                sortSpec = rfQueryParser.getSort(true);
+                sortSpec = rfQueryParser.getSortSpec(true);
             }
 
             targetFqFilters = getFilters(req, CommonParams.FQ);
@@ -381,29 +381,29 @@ public class RelevancyFeedbackHandler extends RequestHandlerBase
         return "Dice custom RelevancyFeedback handler";
     }
 
-    @Override
-    public String getSource() {
-        return "$URL$";
-    }
-
-    @Override
-    public String getVersion(){
-
-        if (version != null && version.length() > 0){
-            return version;
-        }
-        version = JarVersion.getVersion(log);
-        return version;
-    };
-
-
-    @Override
-    public URL[] getDocs() {
-        try {
-            return new URL[] { new URL("http://wiki.apache.org/solr/RelevancyFeedback") };
-        }
-        catch( MalformedURLException ex ) { return null; }
-    }
-
+//    @Override
+//    public String getSource() {
+//        return "$URL$";
+//    }
+//
+//    @Override
+//    public String getVersion(){
+//
+//        if (version != null && version.length() > 0){
+//            return version;
+//        }
+//        version = JarVersion.getVersion(log);
+//        return version;
+//    };
+//
+//
+//    @Override
+//    public URL[] getDocs() {
+//        try {
+//            return new URL[] { new URL("http://wiki.apache.org/solr/RelevancyFeedback") };
+//        }
+//        catch( MalformedURLException ex ) { return null; }
+//    }
+//
 
 }

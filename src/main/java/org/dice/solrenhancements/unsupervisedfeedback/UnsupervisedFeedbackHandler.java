@@ -96,7 +96,7 @@ public class UnsupervisedFeedbackHandler extends RequestHandlerBase
 
             parser = QParser.getParser(q, defType, req);
             query = parser.getQuery();
-            sortSpec = parser.getSort(true);
+            sortSpec = parser.getSortSpec(true);
 
             targetFqFilters = getFilters(req, CommonParams.FQ);
             ufFqFilters    = getFilters(req, UnsupervisedFeedbackParams.FQ);
@@ -333,28 +333,28 @@ public class UnsupervisedFeedbackHandler extends RequestHandlerBase
         return "Solr RelevancyFeedback";
     }
 
-    @Override
-    public String getSource() {
-        return "$URL$";
-    }
-
-    @Override
-    public URL[] getDocs() {
-        try {
-            return new URL[] { new URL("http://wiki.apache.org/solr/RelevancyFeedback") };
-        }
-        catch( MalformedURLException ex ) { return null; }
-    }
-
-    private String version = null;
-
-    @Override
-    public String getVersion() {
-        if (version != null) {
-            return version;
-        }
-
-        version = JarVersion.getVersion(log);
-        return version;
-    }
+//    @Override
+//    public String getSource() {
+//        return "$URL$";
+//    }
+//
+//    @Override
+//    public URL[] getDocs() {
+//        try {
+//            return new URL[] { new URL("http://wiki.apache.org/solr/RelevancyFeedback") };
+//        }
+//        catch( MalformedURLException ex ) { return null; }
+//    }
+//
+//    private String version = null;
+//
+//    @Override
+//    public String getVersion() {
+//        if (version != null) {
+//            return version;
+//        }
+//
+//        version = JarVersion.getVersion(log);
+//        return version;
+//    }
 }
